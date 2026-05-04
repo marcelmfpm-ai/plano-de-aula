@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Gerador de Plano de Aula V3</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+
+    .topo {
+      background: linear-gradient(135deg, #1a3a5c, #2d6a9f);
+      color: white;
+      border-radius: 12px;
+      padding: 10px 32px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .topo-texto h1 { font-size: 1.6rem; font-weight: 700; margin: 0; color: #D4AF37; }
+    .topo-texto p  { margin: 4px 0 0; opacity: 0.8; font-size: 0.9rem; }
+    .topo-logo { height: 85px !important; width: 85px !important; object-fit: contain; flex-shrink: 0; border-radius: 50%; display: block; }
+
+    .secao {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .secao-header {
+      background: #1a3a5c;
+      color: #D4AF37;
+      padding: 12px 20px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.4px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+    .secao-header .chevron {
+      font-size: 0.75rem;
+      opacity: 0.75;
+      transition: transform 0.25s ease;
+    }
+    .secao.collapsed .chevron {
+      transform: rotate(-90deg);
+    }
+    .secao-body {
+      transition: none;
+    }
+    .secao.collapsed .secao-body {
+      display: none;
+    }
+    .secao-body { padding: 20px 24px; }
+
+    .form-label { font-weight: 500; font-size: 0.88rem; color: #444; margin-bottom: 4px; }
+    .form-control, .form-select {
+      border-radius: 6px;
+      border: 1px solid #d0d5dd;
+      font-size: 0.9rem;
+    }
+    .form-control:focus { border-color: #2d6a9f; box-shadow: 0 0 0 3px rgba(45,106,159,0.15); }
+
+    .btn-gerar {
+      background: #1a3a5c;
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 14px;
+      border-radius: 8px;
+      border: none;
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+    .btn-gerar:hover { background: #0d2240; color: white; }
+
+    .obj-dropdown {
+      position: absolute; top: 100%; left: 0; right: 0;
+      background: #fff; border: 1px solid #d0d5dd; border-radius: 6px;
+      min-height: 600px; max-height: 1100px; overflow-y: auto; z-index: 200;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    .obj-dropdown-item {
+      padding: 11px 14px; font-size: 0.9rem; cursor: pointer;
+      border-bottom: 1px solid #f0f0f0; line-height: 1.5;
+    }
+    .obj-dropdown-item:last-child { border-bottom: none; }
+    .obj-dropdown-item:hover, .obj-dropdown-item.ativo { background: #e8f0fe; }
+    .obj-selecionado {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 7px 10px; background: #f0f4f8; border-radius: 6px;
+      margin-bottom: 6px; font-size: 0.88rem; line-height: 1.4;
+    }
+    .obj-selecionado span { flex: 1; color: #1a3a5c; }
+    .obj-selecionado .btn-remover-obj {
+      flex-shrink: 0; background: #fff0f0; color: #c0392b;
+      border: 1px solid #f5c6cb; border-radius: 4px;
+      padding: 1px 8px; font-size: .8rem; cursor: pointer; line-height: 1.5;
+    }
+    .obj-selecionado .btn-remover-obj:hover { background: #fde8e8; }
+    .tabela-estrutura thead th {
+      background: #1a3a5c; color: white; font-size:.85rem;
+      font-weight: 600; vertical-align: middle;
+    }
+    .tabela-estrutura td { vertical-align: middle; font-size:.88rem; }
+    .tabela-estrutura .td-acumulado {
+      background: #f0f4f8; font-weight: 700;
+      color: #1a3a5c; text-align: center;
+    }
+    .tabela-estrutura .td-tempo input {
+      text-align: center; font-weight: 600;
+    }
+
+    .verif-row { position:relative; }
+    .verif-row textarea { padding-right: 36px; resize: vertical; }
+    .verif-row .btn-remover-verif {
+      position:absolute; top:6px; right:6px;
+      background:#fff0f0; border:1px solid #f5c6cb; color:#c0392b;
+      border-radius:4px; padding:1px 7px; font-size:.8rem; line-height:1.4;
+      cursor:pointer;
+    }
+    .verif-row .btn-remover-verif:hover { background:#fde8e8; }
+
+    .intro-fixa {
+      background: #f8f9fa;
+      border-left: 3px solid #2d6a9f;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      color: #444;
+      border-radius: 0 6px 6px 0;
+      font-style: italic;
+    }
+    .subsecao-titulo {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #1a3a5c;
+      border-left: 3px solid #2d6a9f;
+      padding-left: 8px;
+    }
+    .btn-adicionar {
+      background: #e8f0fe;
+      color: #1a3a5c;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1px dashed #2d6a9f;
+      border-radius: 6px;
+      padding: 5px 14px;
+    }
+    .btn-adicionar:hover { background: #d0e2fc; }
+    .btn-remover {
+      background: #fff0f0;
+      color: #c0392b;
+      border: 1px solid #f5c6cb;
+      border-radius: 0 6px 6px 0;
+      padding: 0 12px;
+      font-size: 0.85rem;
+    }
+    .btn-remover:hover { background: #fde8e8; }
+
+    .acc-mat {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #1a3a5c;
+      background: #f8f9fa;
+      padding: 10px 16px;
+    }
+    .acc-mat:not(.collapsed) { background: #e8f0fe; color: #1a3a5c; }
+    .acc-mat.tem-itens::after {
+      content: attr(data-total);
+      background: #1a3a5c;
+      color: white;
+      font-size: 0.75rem;
+      border-radius: 20px;
+      padding: 1px 8px;
+      margin-left: 8px;
+    }
+    .item-mat { padding: 2px 0; }
+    .item-mat .mat-label { font-size: 0.88rem; color: #333; }
+    .item-mat input:focus { border-color: #2d6a9f; }
+
+    .atividade-check { display: none; }
+    .atividade-check-label {
+      cursor: pointer;
+      padding: 5px 13px;
+      border-radius: 20px;
+      border: 1px solid #d0d5dd;
+      background: #f8f9fa;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #444;
+      user-select: none;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .atividade-check-label:hover { border-color: #2d6a9f; background: #e8f0fe; }
+    .atividade-check-label:has(.atividade-check:checked) {
+      background: #1a3a5c;
+      color: #D4AF37;
+      border-color: #1a3a5c;
+      font-weight: 700;
+    }
+
+    .badge-em-breve {
+      background: #e8f0fe;
+      color: #1a73e8;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    /* ── SIDEBAR PROJETOS ── */
+    #sidebar-projetos {
+      position: fixed;
+      top: 0; right: -360px;
+      width: 340px;
+      height: 100vh;
+      background: #fff;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+      z-index: 1050;
+      transition: right 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    #sidebar-projetos.aberta { right: 0; }
+    #sidebar-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 1049;
+    }
+    #sidebar-overlay.ativo { display: block; }
+    .sidebar-header {
+      background: linear-gradient(135deg, #1a3a5c, #2d6a9f);
+      color: #D4AF37;
+      padding: 16px 20px;
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .sidebar-header button {
+      background: none; border: none;
+      color: #fff; font-size: 1.3rem; cursor: pointer; line-height: 1;
+    }
+    .sidebar-body {
+      flex: 1; overflow-y: auto;
+      padding: 14px;
+    }
+    .proj-card {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      background: #f8f9fa;
+      transition: box-shadow 0.15s;
+    }
+    .proj-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .proj-card .proj-nome { font-weight: 600; font-size: .92rem; color: #1a3a5c; }
+    .proj-card .proj-data { font-size: .75rem; color: #888; margin-top: 2px; }
+    #btn-toggle-sidebar {
+      position: fixed;
+      top: 18px;
+      right: 32px;
+      background: linear-gradient(135deg, #1a3a5c, #2d6a9f);
+      color: #D4AF37;
+      border: none;
+      border-radius: 50px;
+      padding: 14px 22px;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      z-index: 1048;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #btn-toggle-sidebar:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+<div class="container py-4" style="max-width: 860px;">
+
+  <div class="topo">
+    <div class="topo-texto">
+      <h1>Gerador de Plano de Aula</h1>
+      <p>CFP/2026 &mdash; Disciplina: APC &nbsp;|&nbsp; Preencha os campos e clique em Gerar</p>
+    </div>
+    <img src="{{ url_for('static', filename='logo_apc.png') }}" alt="Logo APC" class="topo-logo">
+  </div>
+
+  <form action="/gerar" method="POST">
+
+    <!-- ── IDENTIFICAÇÃO ────────────────────────────────────────── -->
+    <div class="secao collapsed">
+      <div class="secao-header" onclick="toggleSecao(this)">Identificação <span class="chevron">&#9660;</span></div>
+      <div class="secao-body">
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label">Cargo</label>
+            <select class="form-select" name="cargo" required>
+              <option value="" disabled selected>Selecione o cargo...</option>
+              <option>AGENTE DE POLÍCIA FEDERAL</option>
+              <option>ESCRIVÃO DE POLÍCIA FEDERAL</option>
+              <option>DELEGADO DE POLÍCIA FEDERAL</option>
+              <option>PERITO CRIMINAL FEDERAL</option>
+              <option>PAPILOSCOPISTA POLICIAL FEDERAL</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Módulo</label>
+            <select class="form-select" name="modulo" id="modulo" onchange="preencherModulo()">
+              <option value="" disabled selected>Selecione...</option>
+              <option value="01">01</option>
+              <option value="02">02</option>
+              <option value="03">03</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Unidade</label>
+            <select class="form-select" name="unidade">
+              <option value="" disabled selected>Selecione...</option>
+              <option>01</option><option>02</option><option>03</option>
+              <option>04</option><option>05</option><option>06</option>
+              <option>07</option><option>08</option><option>09</option>
+              <option>10</option><option>11</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Quantidade de Aulas</label>
+            <select class="form-select" name="horas_aula" id="horas_aula" onchange="calcularCarga()">
+              <option value="" disabled selected>Selecione...</option>
+              <option value="01">01</option><option value="02">02</option>
+              <option value="03">03</option><option value="04">04</option>
+              <option value="05">05</option><option value="06">06</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Carga Horária (min)</label>
+            <input type="text" class="form-control" name="carga_horaria" id="carga_horaria"
+                   readonly style="background:#f0f2f5; font-weight:600; color:#1a3a5c;">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Descrição do Módulo</label>
+            <input type="text" class="form-control" name="modulo_descricao" id="modulo_descricao"
+                   readonly style="background:#f0f2f5; font-weight:600; color:#1a3a5c;">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Local da Aula</label>
+            <select class="form-select" name="local_aula">
+              <option value="" disabled selected>Selecione...</option>
+              <option>Sala de Aula</option>
+              <option>Off-Road</option>
+              <option>Cidade Cenográfica</option>
+              <option>Laboratório</option>
+              <option>Ambientes externos, incluindo Aeroporto de Brasília</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Divisão da Turma</label>
+            <select class="form-select" name="divisao_turma" id="divisao_turma" onchange="toggleDivisaoOutro()">
+              <option value="" disabled selected>Selecione...</option>
+              <option>4 equipes de 5 alunos</option>
+              <option>5 equipes de 4 alunos</option>
+              <option>5 equipes de 8 alunos</option>
+              <option>8 equipes de 5 alunos</option>
+              <option>2 grupos de 20 alunos → subdivididos em 4 equipes de 5 alunos</option>
+              <option>2 grupos de 20 alunos → subdivididos em 5 equipes de 4 alunos</option>
+              <option>2 grupos de 20 alunos → subdivididos em 5 equipes de 8 alunos</option>
+              <option value="Outro">Outro</option>
+            </select>
+            <input type="text" class="form-control mt-2" name="divisao_turma_outro" id="divisao_turma_outro"
+                   placeholder="Descreva a divisão da turma..."
+                   style="display:none;">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Grupo da Turma</label>
+            <select class="form-select" name="grupo_turma" id="grupo_turma">
+              <option value="" disabled selected>Selecione...</option>
+              <option>Charlie/Fox</option>
+              <option>Sem divisão</option>
+            </select>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Descrição da Aula</label>
+            <input type="hidden" name="atividade_descricao" id="atividade_hidden" value="">
+            {% set atividades = [
+              'Plantão','Sobreaviso',
+              'Ocorrência Eleitoral 1','Ocorrência Eleitoral 2',
+              'Cumprimento de MBA DAMAZ','Cumprimento MBA Previdenciário','Cumprimento MBA DCIBER',
+              'Fonte Humana','Planejamento Vigilância','Vigilância','Análise IPED',
+              'Planejamento Operação','Deflagração Operação','Análise Material Apreendido',
+              'Audiência','Revisão'
+            ] %}
+            <select id="descricao_aula_select" name="descricao_aula" class="form-select mb-2"
+                    onchange="onDescricaoAulaSelect(this.value)">
+              <option value="">-- Selecione --</option>
+              {% for atv in atividades %}
+              <option value="{{ atv }}">{{ atv }}</option>
+              {% endfor %}
+              <option value="__outro__">Outro</option>
+            </select>
+            <input type="text" id="descricao_aula_outro" class="form-control"
+                   placeholder="Digite a descrição da aula..."
+                   style="display:none;"
+                   oninput="document.querySelector('[name=descricao_aula]').value = this.value">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Importar Plano de Aula</label>
+            <div class="d-flex flex-wrap gap-2" id="pills-atividade">
+              <label class="atividade-check-label" style="border-color:#c0392b; color:#c0392b;">
+                <input type="checkbox" class="atividade-check" value="__outro__" onchange="onAtividadeCheck(this)">
+                NÃO
+              </label>
+              {% for atv in atividades %}
+              <label class="atividade-check-label">
+                <input type="checkbox" class="atividade-check" value="{{ atv }}" onchange="onAtividadeCheck(this)">
+                {{ atv }}
+              </label>
+              {% endfor %}
+            </div>
+            <input type="text" id="outro_atividade_input" class="form-control mt-2"
+                   placeholder="Digite a descrição da aula..."
+                   style="display:none;"
+                   oninput="onOutroAtividadeInput(this.value)">
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="secao collapsed">
+      <div class="secao-header" onclick="toggleSecao(this)">1. Objetivos de Aprendizagem<span class="chevron">&#9660;</span></div>
+      <div class="secao-body">
+
+        <div class="intro-fixa mb-3">
+          Ao final da aula, os alunos deverão ser capazes de:
+        </div>
+
+        <!-- Linhas de objetivos (geradas pelo JS) -->
+        <div id="lista-objetivos" class="mb-2"></div>
+        <div class="d-flex align-items-center mt-1">
+          <button type="button" class="btn btn-adicionar"
+                  onclick="adicionarLinhaObjetivo()">
+            &#43; Adicionar objetivo
+          </button>
+          <button type="button" class="btn btn-adicionar ms-auto"
+                  onclick="abrirCadastro('objetivo')"
+                  title="Cadastrar novo objetivo"
+                  style="border-color:#1a3a5c;color:#1a3a5c;padding:4px 10px;">
+            &#9998;
+          </button>
+        </div>
+
+        <!-- Ênfase -->
+        <div class="subsecao-titulo mt-4 mb-2">Ênfase</div>
+        <div id="lista-enfase" class="mb-2"></div>
+        <div class="d-flex align-items-center mt-1">
+          <button type="button" class="btn btn-adicionar"
+                  onclick="adicionarLinhaEnfase()">
+            &#43; Adicionar ênfase
+          </button>
+          <button type="button" class="btn btn-adicionar ms-auto"
+                  onclick="abrirCadastro('enfase')"
+                  title="Cadastrar nova ênfase"
+                  style="border-color:#1a3a5c;color:#1a3a5c;padding:4px 10px;">
+            &#9998;
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="secao collapsed">
+      <div class="secao-header" onclick="toggleSecao(this)">2. Estratégia de Ensino<span class="chevron">&#9660;</span></div>
+      <div class="secao-body">
+
+        <!-- Parágrafo introdutório com campos dinâmicos -->
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="form-label mb-0">Parágrafo introdutório</span>
+            <span class="badge-em-breve" style="font-size:.72rem;">gerado automaticamente pela Identificação</span>
+          </div>
+          <textarea class="form-control" name="estrategia_intro" id="estrategia_intro" rows="6"
+                    style="background:#f8f9fa;color:#444;font-size:.88rem;" readonly></textarea>
+        </div>
+
+        <!-- Bullets de estratégia -->
+        <div>
+          <div class="subsecao-titulo mb-2">Diretrizes</div>
+          <div id="lista-estrategia">
+            {% set estrategia_padrao = [
+              'Aprendizagem baseada em problemas;',
+              'Feedback curto e direcionado;',
+              'O professor deverá facilitar e orientar o aprendizado, sem interromper excessivamente;',
+              'Correções estritamente necessárias, apenas quando houver risco à segurança ou comprometimento grave do procedimento;',
+              'Estimular reflexão, perguntas e tomada de decisão dos alunos;',
+              'Evitar "aula expositiva longa": briefing deve ser objetivo.',
+              'Priorizar perguntas que estimulem raciocínio ("Como poderiam melhorar…?").',
+              'Erros não críticos devem ser deixados para o debriefing final (aprendizagem pela reflexão).',
+              'Evitar sobrecarga cognitiva: priorizar ações essenciais, sem detalhamentos excessivos durante a simulação.',
+              'Favorecer ambiente seguro para o aluno testar, errar e aprender.'
+            ] %}
+            {% for item in estrategia_padrao %}
+            <div class="verif-row mb-2">
+              <textarea class="form-control" name="estrategia_bullet" rows="2">{{ item }}</textarea>
+              <button type="button" class="btn-remover-verif" onclick="this.closest('.verif-row').remove()">✕</button>
+            </div>
+            {% endfor %}
+          </div>
+          <button type="button" class="btn btn-adicionar mt-1"
+                  onclick="adicionarEstrategia()">
+            &#43; Adicionar diretriz
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="secao collapsed">
+      <div class="secao-header" onclick="toggleSecao(this)">3. Recursos Necessários<span class="chevron">&#9660;</span></div>
+      <div class="secao-body">
+
+        <!-- 3.1 Humano -->
+        <div class="mb-4">
+          <div class="subsecao-titulo mb-3">3.1 Recursos Humanos</div>
+
+          <ul class="nav nav-tabs" id="tabsHumano" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="tab-btn-professores" data-bs-toggle="tab" data-bs-target="#tab-professores" type="button">Professores</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-btn-monitores" data-bs-toggle="tab" data-bs-target="#tab-monitores" type="button">Monitores</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-btn-auxiliares" data-bs-toggle="tab" data-bs-target="#tab-auxiliares" type="button">Auxiliares</button>
+            </li>
+          </ul>
+
+          <div class="tab-content border border-top-0 rounded-bottom p-3 bg-white">
+
+            <!-- Professores -->
+            <div class="tab-pane fade show active" id="tab-professores">
+              <div class="row g-3 mt-0">
+
+                <!-- APC com expansão de subtipos -->
+                <div class="col-12">
+                  <label class="form-label">Quantidade de Professores APC</label>
+                  <input type="number" class="form-control" name="prof_apc_qtd" id="prof_apc_qtd"
+                         min="0" value="0" oninput="expandirSubtipos(this.value)"
+                         style="max-width:120px;">
+                </div>
+                <div class="col-12" id="profs-apc-lista"></div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Professor(es) DAMAZ</label>
+                  <input type="number" class="form-control" id="prof_damaz" name="prof_damaz" min="0" value="0" oninput="atualizarTotaisHumano()">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Professor(es) DCIBER</label>
+                  <input type="number" class="form-control" id="prof_dciber" name="prof_dciber" min="0" value="0" oninput="atualizarTotaisHumano()">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Professor(es) Epol</label>
+                  <input type="number" class="form-control" id="prof_epol" name="prof_epol" min="0" value="0" oninput="atualizarTotaisHumano()">
+                </div>
+              </div>
+            </div>
+
+            <!-- Monitores -->
+            <div class="tab-pane fade" id="tab-monitores">
+              <div class="row g-3 mt-0">
+                <div class="col-md-6">
+                  <label class="form-label">Monitor(es) de APC</label>
+                  <input type="number" class="form-control" id="monitor_apc" name="monitor_apc" min="0" value="0" oninput="atualizarTotaisHumano()">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Monitor(es) Sala</label>
+                  <input type="number" class="form-control" id="monitor_sala" name="monitor_sala" min="0" value="0" oninput="atualizarTotaisHumano()">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Monitor(es) Epol</label>
+                  <input type="number" class="form-control" id="monitor_epol" name="monitor_epol" min="0" value="0" oninput="atualizarTotaisHumano()">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Monitor(es) Damaz</label>
+                  <input type="number" class="form-control" id="monitor_damaz" name="monitor_damaz" min="0" value="0" oninput="atualizarTotaisHumano()">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Monitor(es) DCIBER</label>
+                  <input type="number" class="form-control" id="monitor_dciber" name="monitor_dciber" min="0" value="0" oninput="atualizarTotaisHumano()">
+                </div>
+              </div>
+            </div>
+
+            <!-- Auxiliares -->
+            <div class="tab-pane fade" id="tab-auxiliares">
+              <div class="row g-3 mt-0">
+                <div class="col-12">
+                  <label class="form-label">Quantidade de Auxiliares</label>
+                  <input type="number" class="form-control" name="aux_qtd" id="aux_qtd"
+                         min="0" value="0" oninput="expandirAuxiliares(this.value)"
+                         style="max-width:120px;">
+                </div>
+                <div class="col-12" id="aux-lista"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 3.2 Material -->
+        <div>
+          <div class="subsecao-titulo mb-3">3.2 Recursos Materiais</div>
+          {%- macro grupo_mat(id, titulo, itens) %}
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed acc-mat" type="button" data-bs-toggle="collapse" data-bs-target="#mat-{{ id }}">
+                {{ titulo }}
+              </button>
+            </h2>
+            <div id="mat-{{ id }}" class="accordion-collapse collapse">
+              <div class="accordion-body py-2">
+                <div class="row g-2" id="row-{{ id }}">
+                  {% for item in itens %}
+                  <div class="col-12 d-flex align-items-center gap-2 item-mat">
+                    <input type="number" class="form-control form-control-sm mat-qtd" name="mat_qtd" min="0" value="0" style="max-width:72px;" oninput="atualizarGrupoMat(this)">
+                    <input type="hidden" name="mat_label" value="{{ item }}">
+                    <span class="mat-label">{{ item }}</span>
+                  </div>
+                  {% endfor %}
+                  <div class="col-12 mt-1" id="outros-{{ id }}"></div>
+                </div>
+                <button type="button" class="btn btn-adicionar btn-sm mt-2"
+                        onclick="adicionarOutroMat('outros-{{ id }}', 'mat-{{ id }}')">
+                  + Outros
+                </button>
+              </div>
+            </div>
+          </div>
+          {%- endmacro %}
+
+          <div class="accordion" id="acordeaoMaterial">
+            {{ grupo_mat('docs',  'Documentos', [
+                'Mandado de busca e apreensão','Auto circunstanciado de busca e arrecadação',
+                'Certidão de arregimentação de testemunha','Termo de compromisso / alvará de soltura',
+                'Declaração de dispensa de exame de corpo de delito','Modelos de IPJ (Word)',
+                'Relatórios de diligência (modelo)','Fichas de alvo','Checklist de material',
+                'Listas telefônicas / contatos úteis','Documentos simulados (AUTEX, DOF)',
+                'Documentos pessoais simulados','Folhas de anotação / documentos diversos']) }}
+
+            {{ grupo_mat('elet', 'Equipamentos Eletrônicos', [
+                'Notebook','Computadores com acesso à internet',
+                'Celulares (inoperantes ou cenográficos)','Rádios de comunicação (HT)','Pen drives']) }}
+
+            {{ grupo_mat('veic', 'Veículos', [
+                'Viaturas (caminhonetes)','Viatura','Tratores']) }}
+
+            {{ grupo_mat('oper', 'Materiais Operacionais Policiais', [
+                'Algemas','Blue guns (simulacro de arma curta)','Simulacros de arma longa',
+                'Coldres (externo e velado)','Lanterna','Cinto tático','Coletes de identificação (IBAMA)']) }}
+
+            {{ grupo_mat('peric', 'Materiais de Perícia / Custódia', [
+                'Envelopes de perícia com lacre','Lacres de segurança',
+                'Etiquetas adesivas','Pastas de equipe (malotes)','Luvas']) }}
+
+            {{ grupo_mat('infra', 'Infraestrutura / Mobiliário', [
+                'Tendas','Mesas','Cadeiras','Armários','Gaveteiros','Kit multimídia (projetor)']) }}
+
+            {{ grupo_mat('apoio', 'Materiais de Apoio Operacional', [
+                'Mapas / croquis da área','Pranchetas']) }}
+
+            {{ grupo_mat('ceno', 'Materiais Cenográficos / Probatórios', [
+                'Dinheiro (cenográfico)','Armas apreendidas (cenográficas)','Drogas (cenográficas)',
+                'Materiais de madeireira (madeiras, maquinário rural)',
+                'Caixas e materiais de cobertura (Mercado Livre, Amazon, etc.)']) }}
+          </div><!-- fim acordeao -->
+        </div>
+
+      </div>
+    </div>
+
+    <div class="secao collapsed">
+      <div class="secao-header" onclick="toggleSecao(this)">4. Estrutura Geral da Aula<span class="chevron">&#9660;</span></div>
+      <div class="secao-body">
+
+        <table class="table table-bordered table-sm tabela-estrutura" id="tabela-estrutura">
+          <thead>
+            <tr>
+              <th style="width:55%;">Etapa</th>
+              <th style="width:20%;">Tempo Estimado (min)</th>
+              <th style="width:18%;">Tempo da Aula</th>
+              <th style="width:7%;"></th>
+            </tr>
+          </thead>
+          <tbody id="estrutura-body">
+            <!-- linhas geradas pelo JS -->
+          </tbody>
+        </table>
+
+        <div class="d-flex align-items-center gap-3 mt-1">
+          <button type="button" class="btn btn-adicionar" onclick="adicionarEtapa()">
+            &#43; Adicionar etapa
+          </button>
+          <span class="text-muted" style="font-size:.85rem;">
+            Total: <strong id="estrutura-total">0 min</strong>
+          </span>
+        </div>
+
+        <!-- Sub-seções geradas automaticamente ao selecionar etapas -->
+        <div id="detalhes-etapas" class="mt-4"></div>
+
+      </div>
+    </div>
+
+    <div class="secao collapsed">
+      <div class="secao-header" onclick="toggleSecao(this)">5. Ressalvas Didáticas Importantes<span class="chevron">&#9660;</span></div>
+      <div class="secao-body">
+        <div id="lista-ressalvas">
+          {% set ressalvas_padrao = [
+            'Evitar "aula expositiva longa": briefing deve ser objetivo;',
+            'Professores evitam dar a solução: priorizar perguntas que estimulem raciocínio ("Como poderiam melhorar?");',
+            'Erros não críticos devem ser deixados para o debriefing final (aprendizagem pela reflexão);',
+            'Evitar sobrecarga cognitiva: priorizar ações essenciais, sem detalhamentos excessivos durante a simulação;',
+            'Favorecer ambiente seguro para o aluno testar, errar e aprender;'
+          ] %}
+          {% for item in ressalvas_padrao %}
+          <div class="verif-row mb-2">
+            <textarea class="form-control" name="ressalva" rows="2">{{ item }}</textarea>
+            <button type="button" class="btn-remover-verif" onclick="this.closest('.verif-row').remove()">✕</button>
+          </div>
+          {% endfor %}
+        </div>
+        <button type="button" class="btn btn-adicionar mt-1"
+                onclick="adicionarRessalva()">
+          &#43; Adicionar ressalva
+        </button>
+      </div>
+    </div>
+
+    <div class="secao collapsed">
+      <div class="secao-header" onclick="toggleSecao(this)">6. Verificação de Aprendizagem<span class="chevron">&#9660;</span></div>
+      <div class="secao-body">
+        <div id="lista-verificacao">
+          <div class="verif-row mb-2">
+            <textarea class="form-control" name="verificacao" rows="2">Formativa e corretiva, baseada na observação direta das atividades práticas e na análise da documentação produzida.</textarea>
+          </div>
+          <div class="verif-row mb-2">
+            <textarea class="form-control" name="verificacao" rows="2">Perguntas e respostas ao longo da aula e no final da unidade.</textarea>
+          </div>
+        </div>
+        <button type="button" class="btn btn-adicionar mt-1"
+                onclick="adicionarVerificacao()">
+          &#43; Adicionar parágrafo
+        </button>
+      </div>
+    </div>
+
+    <!-- ── BOTÕES GERAR / SALVAR ─────────────────────────────────── -->
+    <div class="d-flex gap-2 mt-4">
+      <button type="submit" class="btn-gerar flex-grow-1">
+        ⬇ Gerar Plano de Aula (.docx)
+      </button>
+      <button type="button" class="btn btn-success px-4" style="font-size:1rem;font-weight:600;border-radius:8px;" onclick="salvarProjeto()">
+        💾 Salvar
+      </button>
+    </div>
+
+  </form>
+
+  <!-- ── MODAL NOME DO PROJETO ──────────────────────────────────── -->
+  <!-- Modal Cadastro de Frases -->
+  <div class="modal fade" id="modalCadastro" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#1a3a5c;">
+          <h5 class="modal-title" id="modalCadastroTitulo" style="color:#D4AF37;font-weight:700;">Cadastrar nova frase</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Nova frase</label>
+            <textarea id="inputNovaFrase" class="form-control mb-2" rows="3"
+                      placeholder="Digite a nova frase..."
+                      onkeydown="if(event.ctrlKey&&event.key==='Enter')salvarNovaFrase()"></textarea>
+            <small class="text-muted">Ctrl+Enter para salvar rapidamente</small>
+            <button type="button" class="btn btn-adicionar" onclick="salvarNovaFrase()">
+              &#43; Salvar frase
+            </button>
+          </div>
+          <div class="subsecao-titulo mb-3">Frases cadastradas por você</div>
+          <div id="listaCadastradas"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalSalvar" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Salvar Projeto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Nome do projeto:</label>
+            <input type="text" id="inputNomeProjeto" class="form-control" placeholder="Nome do projeto...">
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Usuário:</label>
+            <input type="text" id="inputUsuario" class="form-control" placeholder="Seu nome...">
+          </div>
+          <div>
+            <label class="form-label small fw-bold">Status:</label>
+            <select id="selectStatusProjeto" class="form-select form-select-sm">
+              <option value="rascunho">Rascunho</option>
+              <option value="concluido">Concluído</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-success btn-sm" onclick="confirmarSalvar()">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- ── BOTÃO LATERAL FIXO ─────────────────────────────────────────── -->
+<button id="btn-toggle-sidebar" onclick="toggleSidebar()">&#128193; Projetos Salvos</button>
+
+<!-- ── OVERLAY ───────────────────────────────────────────────────── -->
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ── SIDEBAR ───────────────────────────────────────────────────── -->
+<div id="sidebar-projetos">
+  <div class="sidebar-header">
+    📁 Projetos Salvos
+    <button onclick="toggleSidebar()" title="Fechar">✕</button>
+  </div>
+  <div class="sidebar-body">
+    <button class="btn btn-sm btn-outline-primary w-100 mb-3" onclick="carregarProjetos()">
+      🔄 Atualizar lista
+    </button>
+    <div id="lista-projetos">
+      <p class="text-muted small text-center mt-3">Clique em "Atualizar lista" para ver os projetos.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const descModulo = {
+    '01': 'Plantão e Sobreaviso',
+    '02': 'Cenários Simulados',
+    '03': 'Fluxo de Polícia Judiciária'
+  };
+
+  function preencherModulo() {
+    const val = document.getElementById('modulo').value;
+    document.getElementById('modulo_descricao').value = descModulo[val] || '';
+  }
+
+  function _valorAtividade() {
+    const el = document.getElementById('atividade_hidden');
+    return (el && el.value) ? el.value : '___';
+  }
+
+  function onDescricaoAulaSelect(val) {
+    const outro = document.getElementById('descricao_aula_outro');
+    if (val === '__outro__') {
+      outro.style.display = '';
+      outro.value = '';
+      outro.focus();
+      document.getElementById('descricao_aula_select').name = '';
+      outro.name = 'descricao_aula';
+    } else {
+      outro.style.display = 'none';
+      outro.name = '';
+      document.getElementById('descricao_aula_select').name = 'descricao_aula';
+    }
+  }
+
+  function onOutroAtividadeInput(val) {
+    document.getElementById('atividade_hidden').value = val;
+    atualizarEstrategiaIntro();
+  }
+
+  function onAtividadeCheck(cb) {
+    document.querySelectorAll('.atividade-check').forEach(el => {
+      if (el !== cb) el.checked = false;
+    });
+    const hidden = document.getElementById('atividade_hidden');
+    const outroInput = document.getElementById('outro_atividade_input');
+
+    if (!cb.checked) {
+      hidden.value = '';
+      outroInput.style.display = 'none';
+      outroInput.value = '';
+    } else if (cb.value === '__outro__') {
+      hidden.value = '';
+      outroInput.style.display = '';
+      outroInput.value = '';
+      outroInput.focus();
+    } else {
+      hidden.value = cb.value;
+      outroInput.style.display = 'none';
+      outroInput.value = '';
+    }
+
+    atualizarEstrategiaIntro();
+    if (cb.checked && cb.value !== '__outro__') {
+      carregarEtapasAtividade();
+    } else if (!cb.checked) {
+      _orgEquipesAutoRows.clear();
+      _deslocAutoRows.clear();
+      _preloadDetalhes.clear();
+      const tbody = document.getElementById('estrutura-body');
+      tbody.innerHTML = '';
+      document.getElementById('detalhes-etapas').innerHTML = '';
+      adicionarEtapa();
+    }
+  }
+
+  function _valorLocal() {
+    const el = document.querySelector('[name=local_aula]');
+    return (el && el.value) ? el.value : '___';
+  }
+
+  function _valorDivisao() {
+    const sel = document.getElementById('divisao_turma');
+    if (!sel || !sel.value) return '___';
+    if (sel.value === 'Outro') {
+      const outro = document.getElementById('divisao_turma_outro');
+      return (outro && outro.value.trim()) ? outro.value.trim() : '___';
+    }
+    return sel.value;
+  }
+
+  function _valorDescricaoAula() {
+    const sel = document.getElementById('descricao_aula_select');
+    if (sel && sel.name === 'descricao_aula' && sel.value && sel.value !== '__outro__') return sel.value;
+    const outro = document.getElementById('descricao_aula_outro');
+    return (outro && outro.value.trim()) ? outro.value.trim() : '___';
+  }
+
+  function atualizarEstrategiaIntro() {
+    const el = document.getElementById('estrategia_intro');
+    if (!el) return;
+    const descricao = _valorDescricaoAula();
+    const local     = _valorLocal();
+    const divisao   = _valorDivisao();
+    el.value =
+      `Aula prática e simulada de ${descricao} será realizada ${local}. ` +
+      `A atividade ocorrerá no horário previsto na grade oficial do curso, sempre com início na sala de aula, ` +
+      `independente do local da execução da aula. Em caso de deslocamento para outro local de instrução, ` +
+      `posteriormente haverá o retorno à sala de aula para formalização dos procedimentos necessários. ` +
+      `A turma será dividida em ${divisao}, assegurando a participação de todos nas etapas operacionais ` +
+      `e administrativas da diligência.`;
+  }
+
+  function adicionarEstrategia() {
+    const lista = document.getElementById('lista-estrategia');
+    const div = document.createElement('div');
+    div.className = 'verif-row mb-2';
+    div.innerHTML = `
+      <textarea class="form-control" name="estrategia_bullet" rows="2" placeholder="Digite a diretriz..."></textarea>
+      <button type="button" class="btn-remover-verif" onclick="this.closest('.verif-row').remove()">✕</button>`;
+    lista.appendChild(div);
+    div.querySelector('textarea').focus();
+  }
+
+  // Monitora os campos de identificação relevantes
+  document.addEventListener('DOMContentLoaded', () => {
+    atualizarEstrategiaIntro();
+    ['divisao_turma','divisao_turma_outro'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', atualizarEstrategiaIntro);
+      if (el) el.addEventListener('input',  atualizarEstrategiaIntro);
+    });
+    document.querySelector('[name=local_aula]')
+      ?.addEventListener('change', atualizarEstrategiaIntro);
+    document.getElementById('descricao_aula_select')
+      ?.addEventListener('change', atualizarEstrategiaIntro);
+    document.getElementById('descricao_aula_outro')
+      ?.addEventListener('input', atualizarEstrategiaIntro);
+    document.querySelector('[name=local_aula]')
+      ?.addEventListener('change', atualizarDeslocamentoAuto);
+
+    ['divisao_turma', 'divisao_turma_outro'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', atualizarOrganizacaoEquipesAuto);
+      if (el) el.addEventListener('input',  atualizarOrganizacaoEquipesAuto);
+    });
+
+  });
+
+  function toggleDivisaoOutro() {
+    const sel = document.getElementById('divisao_turma');
+    const campo = document.getElementById('divisao_turma_outro');
+    if (sel.value === 'Outro') {
+      campo.style.display = 'block';
+      campo.focus();
+    } else {
+      campo.style.display = 'none';
+      campo.value = '';
+    }
+  }
+
+  function toggleOutro() {
+    const sel = document.getElementById('atividade_descricao');
+    const outro = document.getElementById('atividade_descricao_outro');
+    if (sel.value === 'Outro') {
+      outro.style.display = 'block';
+      outro.focus();
+    } else {
+      outro.style.display = 'none';
+      outro.value = '';
+    }
+  }
+
+  const frasesObjetivo = [
+    'Adotar os procedimentos para atuação em equipe em ações de vigilância e obtenção de dados em campo;',
+    'Analisar e aplicar a legislação relacionada aos crimes eleitorais e à lavagem de capitais;',
+    'Analisar documentos e materiais relacionados a crimes contra a flora;',
+    'Analisar exemplos de ocorrências apresentadas durante os trabalhos no regime de plantão e de sobreaviso, bem como tratamento a ser dado;',
+    'Analisar Notícia de Fato proveniente do Comunica PF;',
+    'Analisar os dados extraídos de aparelhos celulares apreendidos, identificando informações relevantes para o desenvolvimento da investigação;',
+    'Aplicar os fundamentos de planejamento de vigilância, observando critérios técnicos e de segurança na execução das ações.',
+    'Aplicar, em situações reais, os conhecimentos adquiridos nas atividades simuladas e identificar sua evolução no transcorrer da disciplina.',
+    'Atuar com segurança e eficiência nas funções de plantonista e de policial de sobreaviso;',
+    'Comparar e diferenciar os modelos de plantão (presencial e remoto);',
+    'Conduzir briefing e debriefing de Operações Policiais.',
+    'Conhecer a dinâmica e a importância da reprodução da prova investigativa na fase processual;',
+    'Conhecer a figura do saque aprovisionado;',
+    'Criar o Registro Especial no sistema Epol com os documentos relacionados às medidas cautelares;',
+    'Decidir o melhor momento para abordagem com prisão em flagrante no contexto de crimes eleitorais;',
+    'Decidir sobre as ações a serem executadas no curso de uma vigilância.',
+    'Destinar materiais e equipamentos encontrados no local de busca;',
+    'Elaborar IPJ – Análise de Material Apreendido, consubstanciando os resultados das análises de conteúdo e de vínculos entre os investigados;',
+    'Elaborar Informação de Polícia Judiciária; e',
+    'Elaborar uma Informação de Polícia Judiciária de Análise (IPJ-A) de forma clara, objetiva e fundamentada, indicando diligências compatíveis com os novos elementos obtidos.',
+    'Elaborar os documentos relacionados ao cumprimento da medida cautelar e demais diligências realizadas;',
+    'Elaborar Termos de Depoimento de forma clara, objetiva e coerente;',
+    'Entrevistar fonte humana;',
+    'Executar ação de vigilância de maneira discreta, segura e eficaz na busca de elementos de interesse;',
+    'Executar mandado de busca e apreensão em investigação de crimes cibernéticos relacionados ao abuso sexual de crianças e adolescentes;',
+    'Executar mandado de busca e apreensão domiciliar de baixa complexidade (entrada franqueada);',
+    'Executar pesquisas adicionais em bancos de dados simulados;',
+    'Formalizar as principais peças de um auto de prisão em flagrante no e-Pol (não colocar no slide este pra não induzir à prisão em flagrante).',
+    'Formalizar atos de Polícia Judiciária no ePol.',
+    'Formalizar os atos da diligência no sistema ePol.',
+    'Formalizar os documentos relativos às diligências realizadas;',
+    'Identificar, no local de busca, os materiais relevantes para investigação, bem como as evidências digitais nos equipamentos do alvo.',
+    'Identificar os normativos e as rotinas de plantão e sobreaviso da Polícia Federal;',
+    'Identificar os principais documentos relacionados às ocorrências de plantão.',
+    'Interpretar os resultados da extração de dados, reconhecendo indícios e conexões úteis à linha investigativa;',
+    'Localizar e arrecadar elementos de interesse da investigação, bem como ilícitos e patrimônio da ORCRIM;',
+    'Narrar as atividades policiais executadas no curso da investigação, demonstrando domínio técnico e coerência nos relatos;',
+    'Planejar a realização de vigilância móvel urbana de alvos, a partir dos dados conhecidos, prevendo a possibilidade de prisão em flagrante delito durante a diligência;',
+    'Planejar deflagração de uma operação policial, envolvendo o cumprimento de medidas cautelares;',
+    'Planejar e executar ações de confirmação de endereço;',
+    'Planejar e executar ações de vigilância velada, utilizando técnicas de observação e equipamentos necessários;',
+    'Planejar e executar o cumprimento de mandado de busca e apreensão em área rural;',
+    'Proteger a criança e o adolescente durante a execução da medida, por meio do afastamento do investigado, acolhimento e salvaguarda a um responsável legal;',
+    'Produzir Informação de Polícia Judiciária (IPJ), analisando informações recebidas e obtidas em campo.',
+    'Realizar a arregimentação da testemunha;',
+    'Realizar a divisão de funções e responsabilidades entre os integrantes da equipe, observando critérios de eficiência e de segurança;',
+    'Realizar busca de informações por meio de pesquisas em bancos de dados;',
+    'Realizar os registros e as formalizações das ocorrências apresentadas.',
+    'Realizar tratamento e análise do material apreendido em operação policial;',
+    'Receber e encaminhar adequadamente as ocorrências;',
+    'Reconhecer a importância da preparação do policial antes da audiência de instrução e julgamento.',
+    'Reconhecer ocorrências emergenciais, prioritárias, administrativas e aquelas que não são de atribuição da Polícia Federal;',
+    'Reavaliar os principais momentos de tomada decisão, visando que em situações reais estas sejam adequadas, eficazes e seguras.',
+    'Revisitar as atividades da disciplina e analisar criticamente as ações desenvolvidas nos três módulos, reavaliando a própria atuação e a dos colegas;',
+    'Zelar pela segurança da equipe e dos demais envolvidos no cenário, bem como pela preservação da cadeia de custódia;',
+  ];
+
+  const _objsSelecionados = new Set();
+
+  function _criarLinhaObjetivo() {
+    const div = document.createElement('div');
+    div.className = 'obj-linha d-flex align-items-center gap-2 mb-2';
+    div.innerHTML = `
+      <div class="position-relative flex-grow-1">
+        <input type="text" class="form-control busca-obj-input"
+               placeholder="Digite para filtrar objetivos..."
+               autocomplete="off"
+               oninput="filtrarObjLinha(this)"
+               onfocus="filtrarObjLinha(this)"
+               onblur="fecharDropObjLinha(this)"
+               onkeydown="navDropObjLinha(event,this)">
+        <div class="obj-dropdown" style="display:none;"></div>
+      </div>
+      <input type="hidden" name="obj_verbo" value="">
+      <button type="button" class="btn-remover-obj" onclick="removerLinhaObjetivo(this)">✕</button>`;
+    return div;
+  }
+
+  function adicionarLinhaObjetivo() {
+    document.getElementById('lista-objetivos').appendChild(_criarLinhaObjetivo());
+  }
+
+  function filtrarObjLinha(input) {
+    const query = input.value.trim().toLowerCase();
+    const dropdown = input.nextElementSibling;
+    const row = input.closest('.obj-linha');
+    const fraseAtual = row.querySelector('[name=obj_verbo]').value;
+    const disponiveis = frasesObjetivo.filter(f => f !== fraseAtual && !_objsSelecionados.has(f));
+    const filtradas = query
+      ? disponiveis.filter(f => f.toLowerCase().includes(query))
+      : disponiveis;
+    if (!filtradas.length) { dropdown.style.display = 'none'; return; }
+    dropdown.innerHTML = filtradas.map(f =>
+      `<div class="obj-dropdown-item"
+            data-frase="${f.replace(/"/g,'&quot;')}"
+            onmousedown="selecionarObjLinha(this)">${f}</div>`
+    ).join('');
+    dropdown.style.display = 'block';
+  }
+
+  function fecharDropObjLinha(input) {
+    setTimeout(() => {
+      const dropdown = input.nextElementSibling;
+      if (dropdown) dropdown.style.display = 'none';
+    }, 150);
+  }
+
+  function navDropObjLinha(e, input) {
+    const dropdown = input.nextElementSibling;
+    const items = dropdown.querySelectorAll('.obj-dropdown-item');
+    if (!items.length) return;
+    let idx = Array.from(items).findIndex(el => el.classList.contains('ativo'));
+    if (e.key === 'ArrowDown') {
+      e.preventDefault(); idx = Math.min(idx + 1, items.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault(); idx = Math.max(idx - 1, 0);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (idx >= 0 && items[idx]) selecionarObjLinha(items[idx]);
+      return;
+    } else if (e.key === 'Escape') {
+      dropdown.style.display = 'none'; return;
+    } else { return; }
+    items.forEach((el, i) => el.classList.toggle('ativo', i === idx));
+    if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+  }
+
+  function selecionarObjLinha(itemEl) {
+    const frase = itemEl.dataset.frase;
+    const dropdown = itemEl.closest('.obj-dropdown');
+    const row = dropdown.closest('.obj-linha');
+    const hiddenInput = row.querySelector('[name=obj_verbo]');
+    const searchInput = row.querySelector('.busca-obj-input');
+    if (_objsSelecionados.has(frase)) return;
+    if (hiddenInput.value) _objsSelecionados.delete(hiddenInput.value);
+    hiddenInput.value = frase;
+    _objsSelecionados.add(frase);
+    searchInput.value = frase;
+    dropdown.style.display = 'none';
+  }
+
+  function removerLinhaObjetivo(btn) {
+    const row = btn.closest('.obj-linha');
+    const hiddenInput = row.querySelector('[name=obj_verbo]');
+    if (hiddenInput.value) _objsSelecionados.delete(hiddenInput.value);
+    const lista = document.getElementById('lista-objetivos');
+    if (lista.querySelectorAll('.obj-linha').length > 1) {
+      row.remove();
+    } else {
+      hiddenInput.value = '';
+      row.querySelector('.busca-obj-input').value = '';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    _carregarCustomFrases();
+    for (let i = 0; i < 5; i++) adicionarLinhaObjetivo();
+    for (let i = 0; i < 3; i++) adicionarLinhaEnfase();
+  });
+
+  // ── CADASTRO DE FRASES ────────────────────────────────────────────
+  let _cadastroTipo = 'objetivo';
+
+  function _getCustom(tipo) {
+    try { return JSON.parse(localStorage.getItem('custom_' + tipo) || '[]'); } catch { return []; }
+  }
+  function _setCustom(tipo, arr) {
+    localStorage.setItem('custom_' + tipo, JSON.stringify(arr));
+  }
+  function _carregarCustomFrases() {
+    _getCustom('objetivo').forEach(f => { if (!frasesObjetivo.includes(f)) frasesObjetivo.push(f); });
+    _getCustom('enfase').forEach(f => { if (!frasesEnfase.includes(f)) frasesEnfase.push(f); });
+  }
+
+  function abrirCadastro(tipo) {
+    _cadastroTipo = tipo;
+    document.getElementById('modalCadastroTitulo').textContent =
+      tipo === 'objetivo' ? 'Cadastrar novo objetivo' : 'Cadastrar nova ênfase';
+    document.getElementById('inputNovaFrase').value = '';
+    _renderizarCadastradas();
+    new bootstrap.Modal(document.getElementById('modalCadastro')).show();
+    setTimeout(() => document.getElementById('inputNovaFrase').focus(), 400);
+  }
+
+  function salvarNovaFrase() {
+    const texto = document.getElementById('inputNovaFrase').value.trim();
+    if (!texto) return;
+    const lista = _cadastroTipo === 'objetivo' ? frasesObjetivo : frasesEnfase;
+    if (lista.includes(texto)) { alert('Essa frase já existe na lista.'); return; }
+    lista.push(texto);
+    const arr = _getCustom(_cadastroTipo);
+    arr.push(texto);
+    _setCustom(_cadastroTipo, arr);
+    document.getElementById('inputNovaFrase').value = '';
+    _renderizarCadastradas();
+    document.getElementById('inputNovaFrase').focus();
+  }
+
+  function removerFraseCustom(btn) {
+    const frase = btn.dataset.frase;
+    const arr = _getCustom(_cadastroTipo).filter(f => f !== frase);
+    _setCustom(_cadastroTipo, arr);
+    const lista = _cadastroTipo === 'objetivo' ? frasesObjetivo : frasesEnfase;
+    const idx = lista.indexOf(frase);
+    if (idx > -1) lista.splice(idx, 1);
+    _renderizarCadastradas();
+  }
+
+  function _renderizarCadastradas() {
+    const arr = _getCustom(_cadastroTipo);
+    const el = document.getElementById('listaCadastradas');
+    if (!arr.length) {
+      el.innerHTML = '<p class="text-muted small">Nenhuma frase cadastrada ainda.</p>';
+      return;
+    }
+    el.innerHTML = arr.map(f => {
+      const safe = f.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `<div class="obj-selecionado mb-2">
+        <span>${safe}</span>
+        <button type="button" class="btn-remover-obj"
+                data-frase="${f.replace(/"/g,'&quot;')}"
+                onclick="removerFraseCustom(this)">✕</button>
+      </div>`;
+    }).join('');
+  }
+
+  // ── ÊNFASE ────────────────────────────────────────────────────────
+  const frasesEnfase = [
+    'Adequado emprego dos recursos materiais e humanos: critério de eficiência e segurança.',
+    'Análise de novos eventos/investigados com sugestões por eventuais Medidas Cautelares;',
+    'Aplicação dos conhecimentos adquiridos nos casos de recepção de novos colegas na unidade.',
+    'Arregimentação de testemunha;',
+    'Atuação no momento decisivo para comprovação da materialidade do crime eleitoral;',
+    'Atribuições da PF na triagem das ocorrências;',
+    'Busca por elementos probatórios, tais como objetos e mídias contendo materiais de abuso sexual infanto-juvenil ou que tenham relação com os fatos investigados;',
+    'Compreender atribuições do plantão e sobreaviso;',
+    'Conhecimento das provas e métodos utilizados na operação;',
+    'Cumprimento da tarefa de análise do bem pelo Módulo de Gestão de Tarefas.',
+    'Decisão sobre a realização de Prisões em flagrante.',
+    'Diligências preliminares de pesquisas para confirmação de informações obtidas em notícia de fato;',
+    'Divisão de tarefas no cumprimento dos mandados e nas formalizações após o retorno à sala de aula (trabalho em EQUIPE).',
+    'Elaboração do Relatório de diligências (registro fotográfico e observações relevantes).',
+    'Formalização de ocorrências.',
+    'Formalização e encaminhamento dos materiais apreendidos.',
+    'Identificação de inconsistências nos documentos apreendidos.',
+    'Importância da formalização dos documentos relacionados ao cumprimento das medidas neste tipo de investigação (IPJ – Triagem de Evidências Digitais em Equipamento Eletrônico - Telefone e Computador e elaboração do Relatório de diligências com registro fotográfico e observações relevantes).',
+    'Importância do Planejamento: organiza as ações e antecipa riscos;',
+    'Interpretação de dados relevantes que tenham relação com a investigação em curso;',
+    'Leitura atenta dos principais documentos produzidos durante operação.',
+    'Objetividade e assertividade nos questionamentos a serem feitos à fonte humana;',
+    'Observação das condutas procedimentais na execução do Mandado de Busca e Apreensão;',
+    'Planejamento de operação policial;',
+    'Planejamento de vigilância urbana móvel de alvos;',
+    'Planejamento e execução de ações de confirmação de endereço com a utilização de história-cobertura;',
+    'Plasticidade do planejamento da ação;',
+    'Plasticidade/flexibilidade como característica do planejamento de ações policiais.',
+    'Postura e proatividade no serviço de plantão',
+    'Preparação para a audiência de instrução;',
+    'Preenchimento do Auto circunstanciado de busca e arrecadação;',
+    'Produção de Informação de Polícia Judiciária (IPJ) como resultado das diligências realizadas.',
+    'Proteção da criança ou do adolescente no local de cumprimento da medida cautelar;',
+    'Realização dos registros de deslacre e lacre de bens no Módulo de Bens do ePol;',
+    'Registro adequado no Livro de Ocorrências;',
+    'Revisão crítica das atividades desenvolvidas nos três módulos que compõem a disciplina;',
+    'Trabalho em equipe;',
+    'Utilização adequada dos recursos: torna a ação mais segura, precisa e eficaz.',
+    'Vinculação da IPJ aos respectivos materiais analisados no Módulo de Bens do ePol;',
+  ];
+
+  const _enfasesSelecionadas = new Set();
+
+  function _criarLinhaEnfase() {
+    const div = document.createElement('div');
+    div.className = 'obj-linha d-flex align-items-center gap-2 mb-2';
+    div.innerHTML = `
+      <div class="position-relative flex-grow-1">
+        <input type="text" class="form-control busca-enfase-input"
+               placeholder="Digite para filtrar ênfases..."
+               autocomplete="off"
+               oninput="filtrarEnfaseLinha(this)"
+               onfocus="filtrarEnfaseLinha(this)"
+               onblur="fecharDropEnfaseLinha(this)"
+               onkeydown="navDropEnfaseLinha(event,this)">
+        <div class="obj-dropdown" style="display:none;"></div>
+      </div>
+      <input type="hidden" name="enfase_noun" value="">
+      <button type="button" class="btn-remover-obj" onclick="removerLinhaEnfase(this)">✕</button>`;
+    return div;
+  }
+
+  function adicionarLinhaEnfase() {
+    document.getElementById('lista-enfase').appendChild(_criarLinhaEnfase());
+  }
+
+  function filtrarEnfaseLinha(input) {
+    const query = input.value.trim().toLowerCase();
+    const dropdown = input.nextElementSibling;
+    const row = input.closest('.obj-linha');
+    const fraseAtual = row.querySelector('[name=enfase_noun]').value;
+    const disponiveis = frasesEnfase.filter(f => f !== fraseAtual && !_enfasesSelecionadas.has(f));
+    const filtradas = query
+      ? disponiveis.filter(f => f.toLowerCase().includes(query))
+      : disponiveis;
+    if (!filtradas.length) { dropdown.style.display = 'none'; return; }
+    dropdown.innerHTML = filtradas.map(f =>
+      `<div class="obj-dropdown-item"
+            data-frase="${f.replace(/"/g,'&quot;')}"
+            onmousedown="selecionarEnfaseLinha(this)">${f}</div>`
+    ).join('');
+    dropdown.style.display = 'block';
+  }
+
+  function fecharDropEnfaseLinha(input) {
+    setTimeout(() => {
+      const dropdown = input.nextElementSibling;
+      if (dropdown) dropdown.style.display = 'none';
+    }, 150);
+  }
+
+  function navDropEnfaseLinha(e, input) {
+    const dropdown = input.nextElementSibling;
+    const items = dropdown.querySelectorAll('.obj-dropdown-item');
+    if (!items.length) return;
+    let idx = Array.from(items).findIndex(el => el.classList.contains('ativo'));
+    if (e.key === 'ArrowDown') {
+      e.preventDefault(); idx = Math.min(idx + 1, items.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault(); idx = Math.max(idx - 1, 0);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (idx >= 0 && items[idx]) selecionarEnfaseLinha(items[idx]);
+      return;
+    } else if (e.key === 'Escape') {
+      dropdown.style.display = 'none'; return;
+    } else { return; }
+    items.forEach((el, i) => el.classList.toggle('ativo', i === idx));
+    if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+  }
+
+  function selecionarEnfaseLinha(itemEl) {
+    const frase = itemEl.dataset.frase;
+    const dropdown = itemEl.closest('.obj-dropdown');
+    const row = dropdown.closest('.obj-linha');
+    const hiddenInput = row.querySelector('[name=enfase_noun]');
+    const searchInput = row.querySelector('.busca-enfase-input');
+    if (_enfasesSelecionadas.has(frase)) return;
+    if (hiddenInput.value) _enfasesSelecionadas.delete(hiddenInput.value);
+    hiddenInput.value = frase;
+    _enfasesSelecionadas.add(frase);
+    searchInput.value = frase;
+    dropdown.style.display = 'none';
+  }
+
+  function removerLinhaEnfase(btn) {
+    const row = btn.closest('.obj-linha');
+    const hiddenInput = row.querySelector('[name=enfase_noun]');
+    if (hiddenInput.value) _enfasesSelecionadas.delete(hiddenInput.value);
+    const lista = document.getElementById('lista-enfase');
+    if (lista.querySelectorAll('.obj-linha').length > 1) {
+      row.remove();
+    } else {
+      hiddenInput.value = '';
+      row.querySelector('.busca-enfase-input').value = '';
+    }
+  }
+
+  const tiposAPC = [
+    'Volante', 'Aproximado', 'Coordenador', 'Responsável', 'Aeroporto', 'Cidade'
+  ];
+
+  function atualizarTotaisHumano() {
+    const somarCampos = (...ids) => ids.reduce((s, id) => {
+      const el = document.getElementById(id);
+      return s + (el ? (parseInt(el.value) || 0) : 0);
+    }, 0);
+
+    const totalProf = somarCampos('prof_apc_qtd', 'prof_damaz', 'prof_dciber', 'prof_epol');
+    const totalMon  = somarCampos('monitor_apc', 'monitor_sala', 'monitor_epol', 'monitor_damaz', 'monitor_dciber');
+    const totalAux  = parseInt(document.getElementById('aux_qtd')?.value) || 0;
+
+    const fmt = (label, n) => n > 0 ? `${label} (${n})` : label;
+    document.getElementById('tab-btn-professores').textContent = fmt('Professores', totalProf);
+    document.getElementById('tab-btn-monitores').textContent   = fmt('Monitores',   totalMon);
+    document.getElementById('tab-btn-auxiliares').textContent  = fmt('Auxiliares',  totalAux);
+  }
+
+  function expandirSubtipos(qtd) {
+    const container = document.getElementById('profs-apc-lista');
+    const n = Math.max(0, parseInt(qtd) || 0);
+    const atual = container.children.length;
+
+    // Adiciona linhas que faltam
+    for (let i = atual; i < n; i++) {
+      const row = document.createElement('div');
+      row.className = 'row g-2 align-items-center mb-2';
+      row.innerHTML = `
+        <div class="col-auto text-muted" style="min-width:90px;font-size:.85rem;">
+          Professor ${i + 1}
+        </div>
+        <div class="col">
+          <select class="form-select form-select-sm" name="prof_apc_tipo">
+            ${tiposAPC.map(t => `<option value="${t}">${t}</option>`).join('')}
+          </select>
+        </div>`;
+      container.appendChild(row);
+    }
+
+    // Remove linhas excedentes
+    while (container.children.length > n) {
+      container.removeChild(container.lastChild);
+    }
+    atualizarTotaisHumano();
+  }
+
+  const tiposAuxiliar = [
+    'Novo morador', 'Proprietário de comércio', 'Funcionária da residência',
+    'Gerente', 'Funcionário', 'Fiscal do IBAMA', 'Policial militar',
+    'Preso', 'Advogado', 'Comerciante', 'Dono do Estabelecimento', 'Testemunha', 'Outro'
+  ];
+
+  // ── ESTRUTURA GERAL DA AULA ────────────────────────────────────
+  let _etapaRowCounter = 0;
+
+  const etapasOpcoes = [
+    'Apresentação da Atividade',
+    'Organização das Equipes',
+    'Deslocamento das Equipes',
+    'Divisão da Turma',
+    'Elaboração dos Questionamentos',
+    'Simulação de Entrevista com Fonte Humana',
+    'Criação do Registro de Fato (Epol)',
+    'Criação do Inquérito Policial (Epol)',
+    'Criação de Registro Especial (Epol)',
+    'Protocolar Pje',
+    'Consulta Banco de Dados Treino',
+    'Planejamento do Acompanhamento de Alvos Pelas Equipes',
+    'Planejamento da Operação',
+    'Briefing e Entrega dos Malotes',
+    'Execução do exercício',
+    'Execução do exercício de análise e formalização da IPJ-A',
+    'Execução da audiência (primeira testemunha)',
+    'Execução da audiência (segunda testemunha)',
+    'Procedimentos no EPol',
+    'Elaboração da IPJ',
+    'Apresentação dos Planos Elaborados Pelas Equipes',
+    'Gabarito do Exercício',
+    'Tempo de Deslocamento',
+    'Debriefing no local da busca',
+    'Debriefing reflexivo e feedback',
+    'Exercício de mesa: Análise do material apreendido',
+    'Consolidação do Planejamento',
+    'Orientações Finais e Debriefing',
+    'Preparação para audiência'
+  ];
+
+  // ── CONFIGURAÇÕES POR ATIVIDADE ────────────────────────────────
+  const configAtividade = {
+    'Cumprimento de MBA DAMAZ': [
+      {
+        nome: 'Apresentação da Atividade', tempo: 5,
+        detalhe:
+          '• Professores se apresentam à turma e fazem uma breve explicação sobre as atividades que serão desenvolvidas.\n' +
+          '• Explicar que será uma atividade prática com simulação de um cenário de deflagração de Operação Policial (cumprimento de mandado de busca e apreensão) sobre investigação desenvolvida pela DAMAZ/ANP, relacionada a crimes ambientais, entre outros.\n' +
+          '• Explicar brevemente o contexto da Operação Escudo da Floresta e os objetivos:\n' +
+          '     – Executar abordagem e cumprir mandado de busca e apreensão.\n' +
+          '     – Elaborar auto circunstanciado com clareza e objetividade.\n' +
+          '     – Analisar materiais probatórios com a utilização de sistemas.\n' +
+          '• Reforçar o papel do professor como orientador, intervindo apenas quando houver risco ou erro crítico.\n' +
+          '• Explicar que durante a simulação, os professores e monitores não fazem parte do cenário e estão apenas como observadores e que poderão pedir para pausar a simulação para intervir em casos excepcionais.\n\n' +
+          'Descrição: A aula inicia-se com o professor recebendo a turma e apresentando, de maneira breve e objetiva, o propósito da atividade prática. Nesse momento, os alunos são lembrados de que a simulação representa o cumprimento de um mandado de busca relacionado a uma investigação ambiental, com ênfase na identificação de fraudes na exportação e na correta observância da cadeia de custódia da madeira através de análise dos documentos fornecidos voluntariamente pelo gerente.\n\n' +
+          'O professor esclarece que o foco da aula não é "acertar todos os passos", mas tomar decisões fundamentadas, cooperar em equipe e vivenciar a dinâmica operacional, alinhando expectativas sobre a postura do docente: ele atuará como orientador, fazendo poucas intervenções e apenas quando houver risco à segurança ou desvio grave de procedimento.'
+      },
+      {
+        nome: 'Organização das Equipes', tempo: 5,
+        detalhe:
+          '• Explicação rápida das etapas da aula: briefing → execução → formalização → análise de dados → debriefing;\n' +
+          '• Os alunos serão divididos em 5 equipes de 8 integrantes (chefe de equipe, escrivão, agentes);\n' +
+          '• Cada equipe será acompanhada por 1 professor de APC + 1 do eixo DAMAZ.\n' +
+          '• Destacar a necessidade de cooperação, comunicação e protagonismo dos alunos.\n\n' +
+          'Descrição: Nessa etapa da aula, o professor descreve a estrutura geral da atividade, explicando que os alunos passarão por quatro momentos: o briefing, conferência das pastas e planejamento operacional, a execução do exercício na área Off-Road, a formalização do auto circunstanciado de busca e arrecadação no local, a utilização de sistemas para análise dos documentos apreendidos e, por fim, um debriefing reflexivo. Ele então realiza a divisão das equipes, reforçando as funções previamente definidas — chefe de equipe (delegado), escrivão e agentes — e esclarece que cada grupo será acompanhado por dois instrutores, um de APC e outro do eixo DAMAZ e o monitor (fiscal do IBAMA), que apenas observarão, intervirão pontualmente e estimularão o raciocínio da equipe. Os alunos são lembrados da necessidade de atuarem com protagonismo, pois a simulação exige tomada de decisão imediata, comunicação clara e boas práticas de registro.'
+      },
+      {
+        nome: 'Briefing e Entrega dos Malotes', tempo: 15,
+        detalhe:
+          '• Apresentação objetiva da investigação: crime ambiental, identificação de fraudes a partir da análise documental, correta observância da cadeia de custódia da madeira.\n' +
+          '• Identificação da Madeireira São Jorge e objetivos da busca.\n' +
+          '• Entrega das pastas e conferência do material:\n' +
+          '     o Mandado de Busca e Apreensão;\n' +
+          '     o Justificativa para o uso de algemas (documento padrão);\n' +
+          '     o Ficha do Alvo (com coordenadas, fotos do local, descrição do cenário);\n' +
+          '     o Roteiro de procedimentos para cumprimento de mandado;\n' +
+          '     o Chave da viatura com identificação da equipe;\n' +
+          '     o Auto Circunstanciado de Busca e Arrecadação;\n' +
+          '     o Certidão de Arregimentação de Testemunha;\n' +
+          '     o 08 pares de luvas;\n' +
+          '     o 01 página de etiquetas adesivas;\n' +
+          '     o 04 envelopes de perícia com lacres;\n' +
+          '     o 01 Envelope/fichas com Autorização de Exploração -AUTEX e Documento de origem florestal – DOF (itens modelos);\n' +
+          '     o Mapa ou croqui da área Off-Road, se aplicável, e rotas traçadas até os locais das buscas;\n' +
+          '     o Checklist do conteúdo da pasta;\n' +
+          '• Professores não dão respostas diretas; provocam a equipe ("Como vocês organizariam a busca?", "O que é prioritário?").\n\n' +
+          'Descrição: Com as equipes organizadas, inicia-se o briefing da operação. O professor apresenta, de forma curta e operacional, o histórico do caso "Escudo da Floresta", contextualizando a investigação que apurou fraudes na exportação e na cadeia de custódia da madeira. Ele resume os principais elementos probatórios a serem identificados, como os documentos denominados Autorização de Exploração - AUTEX e Documento de Origem Florestal – DOFs, os quais podem apresentar inconsistências. Em seguida, destaca informações sobre a Madeireira São Jorge, cujo padrão de atuação motivou a representação pela medida cautelar de busca e apreensão.'
+      },
+      {
+        nome: 'Planejamento da Operação', tempo: 20,
+        detalhe:
+          'Exercício de mesa: Já com as equipes definidas e os malotes em mãos, os alunos terão que dialogar e discutir as ações que tomarão para cumprir os comandos da tarefa recebida.\n' +
+          '• O professor orienta cada equipe a conferir seu malote — contendo checklist, ficha do alvo, mandado judicial, auto circunstanciado, certidões, chaves de viaturas e demais documentos — mas não resolve dúvidas operacionais de maneira direta; ao contrário, provoca a reflexão: "Como vocês organizariam a equipe? O que priorizariam ao chegar ao local?".\n' +
+          '• O professor estimula ações para plano de contingência em caso de fuga ou resistência; definição de pontos de entrada e saída, zonas seguras e áreas de risco; e distribuição de funções operacionais: abordagem, segurança perimetral, coleta de provas, entrevista de testemunhas.\n' +
+          '• Os professores aproximados deverão auxiliar e direcionar os alunos tão somente quando perceberem que o exercício não está fluindo, intervindo com sugestões alternativas e questionando as decisões apresentadas pelos alunos, no intuito de alcançar o objetivo do simulado.'
+      },
+      {
+        nome: 'Tempo de Deslocamento', tempo: 10,
+        detalhe:
+          'Após a execução das atividades anteriores — equipes divididas, cada uma com sua VTR e de posse do respectivo malote — os alunos são liberados, com intervalo de 01 minuto entre cada equipe, para iniciarem o deslocamento até o local de interesse, conforme determinado na ficha de alvo. Cada equipe é composta por duas viaturas. O professor atuará como motorista e, ao chegar ao local, assumirá o papel exclusivo de observador e instrutor da turma. As equipes utilizam técnicas de direção off-road e, ao chegarem ao ponto indicado, assumem o local obedecendo às regras de segurança.'
+      },
+      {
+        nome: 'Execução do exercício', tempo: 70,
+        detalhe:
+          'Ato 1 – Formação do dispositivo\n' +
+          '• Deverá ser feita revista pessoal nos abordados;\n' +
+          '• Professor observa postura e comunicação; intervenção mínima.\n\n' +
+          'Ato 2 – Abordagem na modalidade definida pelos alunos\n' +
+          '• Considerar a busca pessoal feita;\n' +
+          '• Haverá fuga do funcionário da madeireira;\n' +
+          '• Local aberto, gerente vai estar sentado (tenda).\n' +
+          '• Após a tomada do ambiente e leitura do mandado ao responsável, deve-se colher o ciente e recibado do mandado com data e hora.\n' +
+          '• O monitor (servidor do IBAMA) permanecerá dentro do veículo identificado como viatura do IBAMA e, assim que a situação estiver dominada pelos policiais, sairá do carro para participar do exercício.\n' +
+          '• Observação: dois policiais da equipe ou o Fiscal do IBAMA serão designados como testemunha do cumprimento do mandado.\n\n' +
+          'Fala do Funcionário (V. ANEXO 01 – MEMENTO DO FUNCIONÁRIO)\n' +
+          'Quando perguntado sobre o motivo da fuga, deve dizer que se assustou e sabe que tem coisa errada da madeireira e, se perguntado sobre quem os contratou, dizer que não sabe o nome e conhece apenas o gerente.\n\n' +
+          'Fala do Gerente (V. ANEXO 02 – MEMENTO DO GERENTE)\n' +
+          'Deve entregar voluntariamente a AUTEX e os DOFs. Se questionado deve fornecer informações básicas (nome, documento). Deve dizer que não conhece o proprietário, não sabe o nome de quem o contratou, que não há fraudes e que trabalha na madeireira há pouco tempo.\n\n' +
+          'Descrição: A partir do momento em que chegam ao ponto indicado no mandado, os alunos deverão realizar a formação do dispositivo, aplicando o que foi definido no planejamento. Neste momento, o funcionário da madeireira empreende fuga, devendo parte da equipe policial realizar a perseguição do fugitivo e o restante da equipe deverá se dirigir ao escritório da madeireira. O docente observa silenciosamente aspectos como comunicação, posicionamento e postura, interferindo apenas se notar risco concreto. A entrada deve ser realizada exclusivamente na modalidade franqueada. Com a entrada realizada e o ambiente controlado, os alunos procedem à leitura do mandado ao gerente e coletam o ciente.\n\n' +
+          'Ato 3 – Busca e arrecadação\n' +
+          '• Com a equipe policial completa iniciam-se os procedimentos de busca.\n' +
+          '• Após apor ciente no mandado de busca, o gerente voluntariamente apresenta documentos alegando que se trata de atividade legal.\n' +
+          '• Busca no escritório e arredores:\n' +
+          '     o Documentos ambientais, planilhas, documentos fiscais, celular, pen drive, etc.\n' +
+          '• Informar, se não for feito, que o aluno deve solicitar a senha do celular do alvo/investigado;\n' +
+          '• Registro fotográfico dos locais de arrecadação dos objetos;\n' +
+          '• Divisão de tarefas definida pelo chefe de equipe.\n\n' +
+          'Descrição: Após o ciente no mandado o gerente irá entregar a Autorização de Exploração - AUTEX e os Documentos de Origem Florestal – DOF1 e DOF2. Iniciada a busca, os alunos percorrem o escritório e arredores, seguindo suas próprias estratégias de organização. Eles recolhem documentos, realizam registros fotográficos dos locais de arrecadação, separam mídias, observam as condições do ambiente e aplicam os princípios da cadeia de custódia. A divisão de tarefas deve surgir da própria equipe, sem imposições do professor. Caso haja erro não crítico, a intervenção é postergada para o debriefing, respeitando a lógica da aprendizagem experiencial.\n\n' +
+          'Ato 4 – Encerramento da busca no local\n' +
+          '• Preenchimento do auto circunstanciado;\n' +
+          '• Etiquetamento e organização das provas obedecendo os normativos sobre cadeia de custódia;\n' +
+          '• Orientar que o aluno deve colocar cada tipo de item – celular, documentos e objetos – em envelopes com lacres distintos (ex.: celular em um lacre, documentos noutro, pen-drives noutro, objetos noutro etc.);\n' +
+          '• Destinação das madeiras e maquinários ao Fiscal do IBAMA para as providências de caráter administrativo. A formalização dar-se-á por observação no próprio auto circunstanciado de arrecadação, com a qualificação do Fiscal, que pode também assinar como testemunha.\n\n' +
+          'Fala do Fiscal do IBAMA (V. ANEXO 03 – MEMENTO DO FISCAL DO IBAMA)\n' +
+          '"Realizarei a apreensão administrativa da carga. Todos os procedimentos serão devidamente registrados, e a carga permanecerá retida sob a responsabilidade do IBAMA. Farei o inventário e a identificação das madeiras existentes no pátio para formalização no auto de arrecadação." Entregar o termo de apreensão administrativa para os policiais.\n\n' +
+          'Descrição: Concluída a arrecadação e feita a destinação das madeiras e maquinários, ainda dentro da madeireira, a equipe elabora o auto circunstanciado, etiqueta os itens, prepara certidões quando necessário e organiza o material para transporte.\n\n' +
+          'Ato 5 – Prisão do gerente da madeireira\n' +
+          '• Os documentos DOF 1 e DOF 2 são falsos. A volumetria constante em um dos documentos é de números exatos (fato incomum na prática de transporte de madeira). Além disso, os dois documentos possuem a mesma numeração. O Fiscal do IBAMA apontará a falsidade se os alunos não a constatarem.\n' +
+          '• A verificação da falsidade dos documentos pode ser constatada apenas com a leitura dos documentos, sem necessidade de consulta a sistemas.\n\n' +
+          'Descrição: Nesta atividade não serão realizados os procedimentos de lavratura de prisão em flagrante, nem mesmo a condução efetiva do preso e dos funcionários. O funcionário da madeireira também deveria ser conduzido à Delegacia, pois fugiu ao avistar os policiais, o que sugere alguma irregularidade, e será necessário verificar se existe mandado de prisão em aberto em relação a ele.'
+      },
+      {
+        nome: 'Debriefing no local da busca', tempo: 5,
+        detalhe:
+          '• Feedback dos alunos: SOMENTE se houver tempo sobrando.\n' +
+          '• Feedback dos professores, breve e focado nos seguintes aspectos:\n' +
+          '     o Organização da equipe na tomada do local e na realização da busca;\n' +
+          '     o Destinação dos bens ao IBAMA e arrecadação de todos os materiais de interesse da investigação;\n' +
+          '     o Análise preliminar das inconsistências dos documentos apresentados.\n\n' +
+          'Descrição: Realiza-se o debriefing. O docente oferece um feedback direcionado, limitado a dois ou três aspectos centrais para evitar sobrecarga cognitiva. Ele reforça a importância do aprendizado progressivo e da segurança jurídica e operacional, conectando a prática simulada ao desempenho esperado no CFP e à vida funcional futura. Caso haja tempo os alunos refletem brevemente sobre seus acertos, pontos de melhoria e eventuais dificuldades enfrentadas.'
+      },
+      {
+        nome: 'Tempo de Deslocamento', tempo: 10,
+        detalhe:
+          'Retorno das equipes à sala de aula para o início do exercício de mesa. O deslocamento é realizado com as equipes transportando o material arrecadado e os documentos para a fase de análise e formalização. Nos computadores fornecidos estarão disponíveis os sistemas BRASIL MAIS, Notebook LM e o modelo de IPJ a ser confeccionado.'
+      },
+      {
+        nome: 'Exercício de mesa: Análise do material apreendido', tempo: 50,
+        detalhe:
+          'Ao retornarem para a sala, inicia-se o exercício de mesa com a utilização de 10 computadores com acesso à internet (02 por equipe).\n\n' +
+          'A) BRASIL MAIS\n' +
+          '• Os alunos deverão observar os seguintes requisitos (coordenadas: 53° 43\' 35" W; 8° 19\' 39" S):\n' +
+          '     o Localizar, por meio das coordenadas, a Fazenda Serra Verde e a Madeireira São Jorge Ltda;\n' +
+          '     o Observar se houve exploração da Fazenda Serra Verde no período da AUTEX;\n' +
+          '     o Observar a distância entre Plano de Manejo declarado e a madeireira;\n' +
+          '     o Observar ao longo do tempo o aumento do desmatamento dentro da Terra Indígena Menkragnoti.\n\n' +
+          'B) NOTEBOOK-LM (simulando NEXO/SINAPSE – será entregue impresso)\n' +
+          '• Os alunos deverão observar os seguintes requisitos:\n' +
+          '     o Verificar as placas dos veículos declarados como meio de transporte nos DOFs. No DOF 1, a placa informada será de uma motocicleta para transportar as toras de madeira.\n\n' +
+          'Documentos analisados:\n' +
+          '• Autorização de Exploração da Fazenda Serra Verde:\n' +
+          '     o Ao se informar as coordenadas no sistema Brasil Mais, será verificado que se trata de área não explorada — não saiu madeira dessa fazenda;\n' +
+          '     o A área fica dentro de Estação Ecológica de proteção integral, sem autorização para exploração madeireira.\n' +
+          '• Documento de Origem Florestal – DOF 01:\n' +
+          '     o A distância e a rota são inviáveis para o transporte de madeiras;\n' +
+          '     o A placa do veículo é de moto (simulação de pesquisa no NEXO ou SINAPSE);\n' +
+          '     o A emissão do DOF ocorreu em um período em que a AUTEX estava suspensa.\n' +
+          '• Documento de Origem Florestal – DOF 02:\n' +
+          '     o A distância e a rota são inviáveis para o transporte de madeiras;\n' +
+          '     o Os volumes de madeiras estão exatos e, na realidade, isso não é possível;\n' +
+          '     o Um único veículo foi colocado para transportar um grande volume de toras.\n\n' +
+          'SISTEMA EPOL\n' +
+          'Instruções para aula: Os alunos criarão o Registro Especial (RE) relacionado ao cumprimento do mandado. Cada aluno deverá carregar as peças criadas nos respectivos RE.'
+      },
+      {
+        nome: 'Debriefing reflexivo e feedback', tempo: 10,
+        detalhe:
+          'Feedback dos professores — principais pontos a serem observados:\n\n' +
+          'No local da busca:\n' +
+          '• Organização da equipe na tomada do local e na realização da busca;\n' +
+          '• Destinação da madeira e maquinário ao IBAMA, com arrecadação anterior de todos os materiais de interesse da investigação;\n' +
+          '• Análise das inconsistências dos documentos apresentados.\n\n' +
+          'Na delegacia:\n' +
+          '• Identificar irregularidades existentes nos documentos apreendidos por meio de sistemas, confrontando-os entre si;\n' +
+          '• Elaboração de uma Informação de Polícia Judiciária (IPJ) consistente para instruir o auto de prisão em flagrante.\n\n' +
+          'Feedback dos alunos: SOMENTE se houver tempo sobrando.\n\n' +
+          'Descrição: O docente oferece um feedback direcionado, limitado a dois ou três aspectos centrais para evitar sobrecarga cognitiva — normalmente relacionados à comunicação, planejamento e abordagem. Ele reforça a importância do aprendizado progressivo e da segurança jurídica e operacional, conectando a prática simulada ao desempenho esperado no CFP e à vida funcional futura. O encerramento da aula valoriza o protagonismo dos alunos, a experiência prática e a construção coletiva do conhecimento, assegurando que a simulação cumpra seu papel de integrar teoria, decisão e prática supervisionada em um ambiente seguro, reflexivo e profissional. Caso haja tempo, os alunos refletem brevemente sobre seus acertos, pontos de melhoria e eventuais dificuldades enfrentadas.\n\n' +
+          'Observações:\n' +
+          '• Reunir ao final rapidamente professores e monitores para avaliação da atividade realizada, com a escolha de um ou dois apontamentos para correção com base na ênfase dos objetivos da aula.\n' +
+          '• Professor chefe que conduz o Debriefing, SEM INTERRUPÇÃO DOS DEMAIS, que se manifestarão quando lhe for dada a palavra (sem perder de vista os apontamentos já escolhidos para correção).'
+      },
+    ]
+  };
+
+  const temposValidos = [5,10,15,20,25,30,35,40,45,50,55,60,70,80,90,100,110,120];
+
+  function carregarEtapasAtividade() {
+    const hidden = document.getElementById('atividade_hidden');
+    if (!hidden || !hidden.value) return;
+    const config = configAtividade[hidden.value];
+    if (!config) return;
+
+    const tbody = document.getElementById('estrutura-body');
+    tbody.innerHTML = '';
+    _orgEquipesAutoRows.clear();
+    _deslocAutoRows.clear();
+    _preloadDetalhes.clear();
+
+    config.forEach(({ nome, tempo, detalhe }) => {
+      const tr = _criarLinhaEtapa();
+      tbody.appendChild(tr);
+      if (detalhe) _preloadDetalhes.set(tr.dataset.rowId, detalhe);
+
+      const nomeSel = tr.querySelector('[name=etapa_nome]');
+      nomeSel.value = nome;
+
+      const tempoSel        = tr.querySelector('.td-tempo select');
+      const hidden          = tr.querySelector('[name=etapa_tempo]');
+      const tempoOutroInput = tr.querySelector('.etapa-tempo-outro');
+
+      if (temposValidos.includes(tempo)) {
+        tempoSel.value = String(tempo);
+        hidden.value   = tempo;
+      } else {
+        tempoSel.value            = '__outro__';
+        tempoOutroInput.style.display = '';
+        tempoOutroInput.value     = tempo;
+        hidden.value              = tempo;
+      }
+    });
+
+    recalcularEstrutura();
+    sincronizarDetalhes();
+  }
+  // ────────────────────────────────────────────────────────────────
+
+  function _criarLinhaEtapa() {
+    const rowId = 'er-' + (++_etapaRowCounter);
+    const tr = document.createElement('tr');
+    tr.dataset.rowId = rowId;
+    tr.innerHTML = `
+      <td>
+        <select class="form-select form-select-sm" name="etapa_nome"
+                onchange="onEtapaNomeChange(this)">
+          <option value="" disabled selected>Selecione a etapa...</option>
+          ${etapasOpcoes.map(e => `<option value="${e}">${e}</option>`).join('')}
+          <option value="__outro__">— Outro —</option>
+        </select>
+        <input type="text" class="form-control form-control-sm mt-1" name="etapa_nome_outro"
+               style="display:none;" placeholder="Descreva a etapa..."
+               oninput="sincronizarDetalhes()">
+      </td>
+      <td class="td-tempo">
+        <select class="form-select form-select-sm" onchange="onTempoSelect(this)">
+          <option value="">— min —</option>
+          ${[5,10,15,20,25,30,35,40,45,50,55,60,70,80,90,100,110,120].map(v=>`<option value="${v}">${v} min</option>`).join('')}
+          <option value="__outro__">OUTRO VALOR</option>
+        </select>
+        <input type="number" class="form-control form-control-sm mt-1 etapa-tempo-outro"
+               style="display:none;" min="1" placeholder="min"
+               oninput="this.closest('td').querySelector('[name=etapa_tempo]').value=this.value||0; recalcularEstrutura();">
+        <input type="hidden" name="etapa_tempo" value="0">
+      </td>
+      <td class="td-acumulado" name="etapa_acumulado">0 min</td>
+      <td class="text-center">
+        <input type="hidden" name="etapa_detalhe" value="">
+        <button type="button" class="btn btn-remover btn-sm"
+                onclick="removerEtapa(this)">✕</button>
+      </td>`;
+
+    return tr;
+  }
+
+  function _nomeEtapaDaLinha(tr) {
+    const sel = tr.querySelector('[name=etapa_nome]');
+    if (!sel || !sel.value) return '';
+    if (sel.value === '__outro__') {
+      const outro = tr.querySelector('[name=etapa_nome_outro]');
+      return outro ? outro.value.trim() : '';
+    }
+    return sel.value;
+  }
+
+  const textoPadraoEtapa = {
+    'Apresentação da Atividade':
+      'Os professores iniciam a aula com a apresentação à turma, seguida de breve contextualização do conteúdo no âmbito do módulo, situando a atividade em relação às unidades já desenvolvidas e ao contexto geral da disciplina.\n\n' +
+      'Na sequência, são expostos de forma objetiva os objetivos de aprendizagem, destacando as competências a serem desenvolvidas e a aplicação prática dos conhecimentos no decorrer da atividade proposta.\n\n' +
+      'Por fim, são apresentadas as diretrizes gerais da aula, incluindo a metodologia adotada, a dinâmica de participação e o papel do professor como orientador, reforçando a importância da participação ativa dos alunos, da cooperação em equipe e da adequada execução dos procedimentos.'
+  };
+
+  const _orgEquipesAutoRows = new Set();
+
+  function _textoOrganizacaoEquipes() {
+    var divisao = _valorDivisao();
+    return 'Neste momento, os alunos são organizados em equipes de trabalho, conforme a estrutura previamente definida para a atividade (' + divisao + '). O professor orienta quanto à composição dos grupos, podendo manter formações anteriores ou promover nova distribuição, de modo a garantir equilíbrio e participação ativa de todos. São definidos, quando aplicável, os papéis de cada integrante, reforçando a importância da cooperação, comunicação e atuação coordenada entre os membros da equipe.';
+  }
+
+  function atualizarOrganizacaoEquipesAuto() {
+    _orgEquipesAutoRows.forEach(function(rowId) {
+      var detDiv = document.querySelector('#detalhes-etapas [data-row-id="' + rowId + '"]');
+      if (!detDiv) { _orgEquipesAutoRows.delete(rowId); return; }
+      var ta = detDiv.querySelector('textarea');
+      if (!ta) return;
+      var novoTexto = _textoOrganizacaoEquipes();
+      ta.value = novoTexto;
+      var tr = document.querySelector('#estrutura-body tr[data-row-id="' + rowId + '"]');
+      if (tr) {
+        var hidden = tr.querySelector('[name=etapa_detalhe]');
+        if (hidden) hidden.value = novoTexto;
+      }
+    });
+  }
+
+  const _deslocAutoRows = new Set();
+  const _preloadDetalhes = new Map();
+
+  function _textoDeslocamento() {
+    var local = _valorLocal();
+    return 'A etapa consiste no deslocamento organizado dos alunos até ' + local + ', local em que será desenvolvida a atividade prática. O professor orienta quanto aos procedimentos de deslocamento, destacando aspectos de segurança (velocidade permitida), disciplina e organização. Esse momento também é utilizado para preparar os alunos para a execução da atividade, garantindo que todos estejam devidamente posicionados e cientes do início das ações.';
+  }
+
+  function atualizarDeslocamentoAuto() {
+    _deslocAutoRows.forEach(function(rowId) {
+      var detDiv = document.querySelector('#detalhes-etapas [data-row-id="' + rowId + '"]');
+      if (!detDiv) { _deslocAutoRows.delete(rowId); return; }
+      var ta = detDiv.querySelector('textarea');
+      if (!ta) return;
+      var novoTexto = _textoDeslocamento();
+      ta.value = novoTexto;
+      var tr = document.querySelector('#estrutura-body tr[data-row-id="' + rowId + '"]');
+      if (tr) {
+        var hidden = tr.querySelector('[name=etapa_detalhe]');
+        if (hidden) hidden.value = novoTexto;
+      }
+    });
+  }
+
+  function onEtapaNomeChange(sel) {
+    console.log('[PLANO] onEtapaNomeChange chamado, valor:', sel.value);
+    const tr = sel.closest('tr');
+    const outro = tr.querySelector('[name=etapa_nome_outro]');
+    outro.style.display = sel.value === '__outro__' ? '' : 'none';
+    if (sel.value === '__outro__') outro.focus();
+    sincronizarDetalhes();
+  }
+
+  function sincronizarDetalhes() {
+    var container = document.getElementById('detalhes-etapas');
+    console.log('[PLANO] sincronizarDetalhes chamado, container:', container);
+    if (!container) return;
+
+    // Salva textos já preenchidos pelo rowId
+    var textos = {};
+    var existentes = container.querySelectorAll('[data-row-id]');
+    for (var e = 0; e < existentes.length; e++) {
+      var ta0 = existentes[e].querySelector('textarea');
+      if (ta0) textos[existentes[e].dataset.rowId] = ta0.value;
+    }
+
+    container.innerHTML = '';
+    var num = 0;
+    var linhas = document.getElementById('estrutura-body').getElementsByTagName('tr');
+
+    for (var i = 0; i < linhas.length; i++) {
+      var tr = linhas[i];
+      var nome = _nomeEtapaDaLinha(tr);
+      var rowId = tr.dataset.rowId;
+      var hiddenInput = tr.querySelector('[name=etapa_detalhe]');
+
+      if (!nome) {
+        if (hiddenInput) hiddenInput.value = '';
+        continue;
+      }
+
+      num++;
+      var isOrg    = (nome === 'Organização das Equipes');
+      var isDesloc = (nome === 'Deslocamento das Equipes');
+      var isAutoFill = false;
+      var texto;
+      if (_preloadDetalhes.has(rowId)) {
+        texto = _preloadDetalhes.get(rowId);
+        _preloadDetalhes.delete(rowId);
+      } else if (isOrg && _orgEquipesAutoRows.has(rowId)) {
+        texto = _textoOrganizacaoEquipes();
+        isAutoFill = true;
+      } else if (isDesloc && _deslocAutoRows.has(rowId)) {
+        texto = _textoDeslocamento();
+        isAutoFill = true;
+      } else if (textos[rowId] !== undefined) {
+        texto = textos[rowId];
+      } else {
+        texto = (textoPadraoEtapa[nome] || '');
+        if (isOrg) {
+          texto = _textoOrganizacaoEquipes();
+          _orgEquipesAutoRows.add(rowId);
+          isAutoFill = true;
+        } else if (isDesloc) {
+          texto = _textoDeslocamento();
+          _deslocAutoRows.add(rowId);
+          isAutoFill = true;
+        }
+      }
+
+      var titulo = document.createElement('div');
+      titulo.className = 'subsecao-titulo mb-2';
+      titulo.textContent = '4.' + num + ' ' + nome;
+
+      var ta = document.createElement('textarea');
+      ta.className = 'form-control';
+      ta.rows = 4;
+      ta.placeholder = 'Descreva as atividades desta etapa...';
+      ta.value = texto;
+
+      var div = document.createElement('div');
+      div.dataset.rowId = rowId;
+      div.className = 'mb-3';
+      div.appendChild(titulo);
+      div.appendChild(ta);
+
+      if (hiddenInput) hiddenInput.value = texto;
+      (function(ta, hiddenInput, rowIdLocal, isAutoFillLocal, isOrgLocal, isDeslocLocal) {
+        ta.addEventListener('input', function() {
+          if (hiddenInput) hiddenInput.value = ta.value;
+        });
+        if (isAutoFillLocal) {
+          ta.addEventListener('input', function() {
+            if (isOrgLocal)    _orgEquipesAutoRows.delete(rowIdLocal);
+            if (isDeslocLocal) _deslocAutoRows.delete(rowIdLocal);
+          }, { once: true });
+        }
+      })(ta, hiddenInput, rowId, isAutoFill, isOrg, isDesloc);
+
+      container.appendChild(div);
+    }
+  }
+
+  function adicionarEtapa() {
+    document.getElementById('estrutura-body').appendChild(_criarLinhaEtapa());
+    recalcularEstrutura();
+    sincronizarDetalhes();
+  }
+
+  function removerEtapa(btn) {
+    btn.closest('tr').remove();
+    recalcularEstrutura();
+    sincronizarDetalhes();
+  }
+
+  function onTempoSelect(sel) {
+    const td = sel.closest('td');
+    const hidden = td.querySelector('[name=etapa_tempo]');
+    const outro = td.querySelector('.etapa-tempo-outro');
+    if (sel.value === '__outro__') {
+      outro.style.display = '';
+      outro.focus();
+      hidden.value = outro.value || 0;
+    } else {
+      outro.style.display = 'none';
+      hidden.value = sel.value || 0;
+    }
+    recalcularEstrutura();
+  }
+
+  function recalcularEstrutura() {
+    const linhas = document.querySelectorAll('#estrutura-body tr');
+    let acumulado = 0;
+    linhas.forEach(tr => {
+      const tempo = parseInt(tr.querySelector('[name=etapa_tempo]').value) || 0;
+      acumulado += tempo;
+      tr.querySelector('[name=etapa_acumulado]').textContent = acumulado + ' min';
+    });
+    document.getElementById('estrutura-total').textContent = acumulado + ' min';
+  }
+
+  // Inicia com uma linha vazia
+  document.addEventListener('DOMContentLoaded', () => {
+    adicionarEtapa();
+    // Aguarda o browser restaurar valores de formulário antes de sincronizar
+    setTimeout(sincronizarDetalhes, 150);
+  });
+  // ────────────────────────────────────────────────────────────────
+
+  function adicionarRessalva() {
+    const lista = document.getElementById('lista-ressalvas');
+    const div = document.createElement('div');
+    div.className = 'verif-row mb-2';
+    div.innerHTML = `
+      <textarea class="form-control" name="ressalva" rows="2" placeholder="Digite a ressalva..."></textarea>
+      <button type="button" class="btn-remover-verif" onclick="this.closest('.verif-row').remove()">✕</button>`;
+    lista.appendChild(div);
+    div.querySelector('textarea').focus();
+  }
+
+  function adicionarVerificacao() {
+    const lista = document.getElementById('lista-verificacao');
+    const div = document.createElement('div');
+    div.className = 'verif-row mb-2';
+    div.innerHTML = `
+      <textarea class="form-control" name="verificacao" rows="2" placeholder="Digite o parágrafo..."></textarea>
+      <button type="button" class="btn-remover-verif" onclick="removerVerificacao(this)">✕</button>`;
+    lista.appendChild(div);
+    div.querySelector('textarea').focus();
+  }
+
+  function removerVerificacao(btn) {
+    btn.closest('.verif-row').remove();
+  }
+
+  function adicionarOutroMat(outrosId, painelId) {
+    const container = document.getElementById(outrosId);
+    const div = document.createElement('div');
+    div.className = 'col-12 d-flex align-items-center gap-2 item-mat mt-1';
+    div.innerHTML = `
+      <input type="number" class="form-control form-control-sm mat-qtd" name="mat_qtd"
+             min="0" value="0" style="max-width:72px;" oninput="atualizarGrupoMat(this)">
+      <input type="text" class="form-control form-control-sm" name="mat_label"
+             placeholder="Descreva o material...">
+      <button type="button" class="btn btn-remover btn-sm" style="white-space:nowrap;"
+              onclick="this.closest('.d-flex').remove(); atualizarGrupoMat(document.querySelector('#${painelId} .mat-qtd'))">✕</button>`;
+    container.appendChild(div);
+    div.querySelector('input[type=text]').focus();
+  }
+
+  function atualizarGrupoMat(input) {
+    const painel = input.closest('.accordion-collapse');
+    const btn    = document.querySelector(`[data-bs-target="#${painel.id}"]`);
+    const total  = Array.from(painel.querySelectorAll('.mat-qtd'))
+                        .reduce((s, el) => s + (parseInt(el.value) || 0), 0);
+    if (total > 0) {
+      btn.classList.add('tem-itens');
+      btn.setAttribute('data-total', total);
+    } else {
+      btn.classList.remove('tem-itens');
+      btn.removeAttribute('data-total');
+    }
+  }
+
+  function expandirAuxiliares(qtd) {
+    const container = document.getElementById('aux-lista');
+    const n = Math.max(0, parseInt(qtd) || 0);
+
+    while (container.children.length > n) container.removeChild(container.lastChild);
+
+    for (let i = container.children.length; i < n; i++) {
+      const row = document.createElement('div');
+      row.className = 'row g-2 align-items-center mb-2';
+      row.innerHTML = `
+        <div class="col-auto text-muted" style="min-width:90px;font-size:.85rem;">
+          Auxiliar ${i + 1}
+        </div>
+        <div class="col-md-4">
+          <select class="form-select form-select-sm" name="auxiliar_tipo"
+                  onchange="toggleOutroAux(this)">
+            ${tiposAuxiliar.map(t => `<option value="${t}">${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="col" style="display:none;">
+          <input type="text" class="form-control form-control-sm" name="auxiliar_outro"
+                 placeholder="Descreva o auxiliar...">
+        </div>`;
+      container.appendChild(row);
+    }
+    atualizarTotaisHumano();
+  }
+
+  function toggleOutroAux(sel) {
+    const campoOutro = sel.closest('.row').querySelector('.col:last-child');
+    campoOutro.style.display = sel.value === 'Outro' ? '' : 'none';
+    if (sel.value === 'Outro') campoOutro.querySelector('input').focus();
+  }
+
+  function adicionarItem(listaId, nome, placeholder) {
+    const lista = document.getElementById(listaId);
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+      <input type="text" class="form-control" name="${nome}" placeholder="${placeholder}">
+      <button type="button" class="btn btn-remover" onclick="removerItem(this, '${listaId}')">✕</button>`;
+    lista.appendChild(div);
+    div.querySelector('input').focus();
+    atualizarTotaisHumano();
+  }
+
+  function removerItem(btn, listaId) {
+    const lista = document.getElementById(listaId);
+    if (lista.children.length > 1) {
+      btn.closest('.input-group').remove();
+      atualizarTotaisHumano();
+    }
+  }
+
+  function calcularCarga() {
+    const horas = parseInt(document.getElementById('horas_aula').value) || 0;
+    document.getElementById('carga_horaria').value = horas ? horas * 50 + ' min' : '';
+  }
+
+  function toggleSecao(header) {
+    header.closest('.secao').classList.toggle('collapsed');
+  }
+
+  // ── SIDEBAR ──────────────────────────────────────────────────────
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar-projetos');
+    const overlay = document.getElementById('sidebar-overlay');
+    const abrindo = !sidebar.classList.contains('aberta');
+    sidebar.classList.toggle('aberta');
+    overlay.classList.toggle('ativo');
+    if (abrindo) carregarProjetos();
+  }
+
+  // ── SALVAR / CARREGAR PROJETOS ────────────────────────────────────
+  let _projetoAtualId = null;
+
+  function coletarDadosFormulario() {
+    const form = document.querySelector('form');
+    const fd = new FormData(form);
+    const dados = {};
+    for (const [k, v] of fd.entries()) {
+      if (dados[k] === undefined) dados[k] = v;
+      else if (Array.isArray(dados[k])) dados[k].push(v);
+      else dados[k] = [dados[k], v];
+    }
+    return dados;
+  }
+
+  function salvarProjeto() {
+    const modal = new bootstrap.Modal(document.getElementById('modalSalvar'));
+    modal.show();
+  }
+
+  async function confirmarSalvar() {
+    const nome = document.getElementById('inputNomeProjeto').value.trim() || 'Sem título';
+    const usuario = document.getElementById('inputUsuario').value.trim() || '';
+    const status = document.getElementById('selectStatusProjeto').value;
+    const dados = coletarDadosFormulario();
+    const payload = { nome, usuario, status, dados };
+
+    let url = '/salvar';
+    let method = 'POST';
+    if (_projetoAtualId) { url = `/projeto/${_projetoAtualId}`; method = 'PUT'; }
+
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const json = await res.json();
+    if (!_projetoAtualId && json.id) _projetoAtualId = json.id;
+
+    bootstrap.Modal.getInstance(document.getElementById('modalSalvar')).hide();
+    alert(`Projeto "${nome}" salvo com sucesso!`);
+  }
+
+  async function carregarProjetos() {
+    const lista = document.getElementById('lista-projetos');
+    lista.innerHTML = '<p class="text-muted small text-center">Carregando...</p>';
+    const res = await fetch('/projetos');
+    const projetos = await res.json();
+    if (!projetos.length) {
+      lista.innerHTML = '<p class="text-muted small text-center mt-3">Nenhum projeto salvo.</p>';
+      return;
+    }
+    lista.innerHTML = projetos.map(p => `
+      <div class="proj-card">
+        <div class="proj-nome">${p.nome}</div>
+        <div class="proj-data">
+          <span class="badge ${p.status === 'concluido' ? 'bg-success' : 'bg-secondary'} me-1">${p.status}</span>
+          ${p.usuario ? `<span class="me-1">👤 ${p.usuario}</span>` : ''}
+          ${p.atualizado_em ? p.atualizado_em.slice(0,16).replace('T',' ') : ''}
+        </div>
+        <div class="d-flex gap-2 mt-2">
+          <button class="btn btn-sm btn-primary flex-grow-1" onclick="abrirProjeto('${p.id}')">📂 Abrir</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deletarProjeto('${p.id}', this)" title="Excluir">✕</button>
+        </div>
+      </div>`).join('');
+  }
+
+  async function abrirProjeto(id) {
+    const res = await fetch(`/projeto/${id}`);
+    const proj = await res.json();
+    _projetoAtualId = id;
+    document.getElementById('inputNomeProjeto').value = proj.nome || '';
+    const dados = proj.dados || {};
+    const form = document.querySelector('form');
+
+    // Restaurar objetivos de aprendizagem
+    _objsSelecionados.clear();
+    document.getElementById('lista-objetivos').innerHTML = '';
+    const frasesCarregadas = dados.obj_verbo
+      ? (Array.isArray(dados.obj_verbo) ? dados.obj_verbo : [dados.obj_verbo])
+      : [];
+    const totalLinhas = Math.max(5, frasesCarregadas.length);
+    for (let i = 0; i < totalLinhas; i++) adicionarLinhaObjetivo();
+    const linhas = document.getElementById('lista-objetivos').querySelectorAll('.obj-linha');
+    frasesCarregadas.forEach((f, i) => {
+      if (!linhas[i]) return;
+      linhas[i].querySelector('[name=obj_verbo]').value = f;
+      linhas[i].querySelector('.busca-obj-input').value = f;
+      _objsSelecionados.add(f);
+    });
+
+    // Restaurar ênfases
+    _enfasesSelecionadas.clear();
+    document.getElementById('lista-enfase').innerHTML = '';
+    const enfasesCarregadas = dados.enfase_noun
+      ? (Array.isArray(dados.enfase_noun) ? dados.enfase_noun : [dados.enfase_noun])
+      : [];
+    const totalLinhasEnfase = Math.max(3, enfasesCarregadas.length);
+    for (let i = 0; i < totalLinhasEnfase; i++) adicionarLinhaEnfase();
+    const linhasEnfase = document.getElementById('lista-enfase').querySelectorAll('.obj-linha');
+    enfasesCarregadas.forEach((f, i) => {
+      if (!linhasEnfase[i]) return;
+      linhasEnfase[i].querySelector('[name=enfase_noun]').value = f;
+      linhasEnfase[i].querySelector('.busca-enfase-input').value = f;
+      _enfasesSelecionadas.add(f);
+    });
+
+    for (const [k, v] of Object.entries(dados)) {
+      if (k === 'obj_verbo' || k === 'obj_verbo_outro' || k === 'obj_complemento' ||
+          k === 'enfase_noun' || k === 'enfase_comp') continue;
+      const els = form.querySelectorAll(`[name="${k}"]`);
+      if (!els.length) continue;
+      if (els.length === 1) { els[0].value = v; if (els[0].tagName === 'SELECT') els[0].dispatchEvent(new Event('change')); }
+      else { const vals = Array.isArray(v) ? v : [v]; els.forEach((el, i) => { if (vals[i] !== undefined) el.value = vals[i]; }); }
+    }
+    toggleSidebar();
+    alert(`Projeto "${proj.nome}" carregado!`);
+  }
+
+  async function deletarProjeto(id, btn) {
+    if (!confirm('Excluir este projeto?')) return;
+    await fetch(`/projeto/${id}`, { method: 'DELETE' });
+    btn.closest('.proj-card').remove();
+  }
+</script>
+</body>
+</html>

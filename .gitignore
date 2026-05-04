@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.pyo
+plano-de-aula-4a383-firebase-adminsdk-fbsvc-bd042c3e0f.json
+.env
+.vercel
