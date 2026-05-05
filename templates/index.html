@@ -428,25 +428,6 @@
                    oninput="document.querySelector('[name=descricao_aula]').value = this.value">
           </div>
 
-          <div class="col-12">
-            <label class="form-label">Importar Plano de Aula</label>
-            <div class="d-flex flex-wrap gap-2" id="pills-atividade">
-              <label class="atividade-check-label" style="border-color:#c0392b; color:#c0392b;">
-                <input type="checkbox" class="atividade-check" value="__outro__" onchange="onAtividadeCheck(this)">
-                NÃO
-              </label>
-              {% for atv in atividades %}
-              <label class="atividade-check-label">
-                <input type="checkbox" class="atividade-check" value="{{ atv }}" onchange="onAtividadeCheck(this)">
-                {{ atv }}
-              </label>
-              {% endfor %}
-            </div>
-            <input type="text" id="outro_atividade_input" class="form-control mt-2"
-                   placeholder="Digite a descrição da aula..."
-                   style="display:none;"
-                   oninput="onOutroAtividadeInput(this.value)">
-          </div>
 
         </div>
       </div>
@@ -546,7 +527,7 @@
 
         <!-- 3.1 Humano -->
         <div class="mb-4">
-          <div class="subsecao-titulo mb-3">3.1 Recursos Humanos</div>
+          <div class="subsecao-titulo mb-3">3.1 Recursos Humanos<span id="resumo-rh" style="font-weight:400;font-size:.9rem;color:#555;margin-left:8px;"></span></div>
 
           <ul class="nav nav-tabs" id="tabsHumano" role="tablist">
             <li class="nav-item" role="presentation">
@@ -698,6 +679,23 @@
                 'Materiais de madeireira (madeiras, maquinário rural)',
                 'Caixas e materiais de cobertura (Mercado Livre, Amazon, etc.)']) }}
           </div><!-- fim acordeao -->
+        </div>
+
+        <!-- 3.3 Preparação do Cenário -->
+        <div class="mt-4">
+          <div class="subsecao-titulo mb-3">3.3 Preparação do Cenário</div>
+          <input type="hidden" name="prep_cenario_nao_ha" id="prep-cenario-nao-ha-input" value="">
+          <div id="lista-prep-cenario" class="mb-2"></div>
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <button type="button" class="btn btn-adicionar" id="btn-prep-nao-ha"
+                    onclick="togglePrepNaoHa()">
+              Não há
+            </button>
+            <button type="button" class="btn btn-adicionar" id="btn-prep-adicionar"
+                    onclick="adicionarPrepCenario()">
+              &#43; Adicionar
+            </button>
+          </div>
         </div>
 
       </div>
@@ -855,6 +853,26 @@
 <!-- ── BOTÃO LATERAL FIXO ─────────────────────────────────────────── -->
 <button id="btn-toggle-sidebar" onclick="toggleSidebar()">&#128193; Projetos Salvos</button>
 
+<!-- ── MODAL SELETOR DE IMAGEM ──────────────────────────────────── -->
+<div class="modal fade" id="modalSeletorImagem" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" style="font-size:0.95rem;font-weight:700;color:#1a3a5c;">Selecionar Imagens <small class="text-muted fw-normal">(clique para selecionar/deselecionar)</small></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="grade-imagens" class="d-flex flex-wrap gap-3 justify-content-start">
+          <p class="text-muted small">Carregando imagens...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Concluir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── OVERLAY ───────────────────────────────────────────────────── -->
 <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
@@ -953,6 +971,19 @@
     return (el && el.value) ? el.value : '___';
   }
 
+  function _valorDescricaoAula() {
+    var el = document.querySelector('[name=descricao_aula]');
+    var val = (el && el.value) ? el.value : '';
+    return (val && val !== '__outro__') ? val : '___';
+  }
+
+  function _valorObjetivos() {
+    var inputs = document.querySelectorAll('#lista-objetivos [name=obj_verbo]');
+    var objs = [];
+    inputs.forEach(function(inp) { if (inp.value.trim()) objs.push(inp.value.trim()); });
+    return objs;
+  }
+
   function _valorDivisao() {
     const sel = document.getElementById('divisao_turma');
     if (!sel || !sel.value) return '___';
@@ -961,6 +992,12 @@
       return (outro && outro.value.trim()) ? outro.value.trim() : '___';
     }
     return sel.value;
+  }
+
+  function _valorGrupoTurma() {
+    var el = document.getElementById('grupo_turma');
+    if (!el || !el.value || el.value === 'Sem divisão') return '';
+    return el.value;
   }
 
   function _valorDescricaoAula() {
@@ -1012,6 +1049,19 @@
       ?.addEventListener('input', atualizarEstrategiaIntro);
     document.querySelector('[name=local_aula]')
       ?.addEventListener('change', atualizarDeslocamentoAuto);
+
+    document.getElementById('descricao_aula_select')
+      ?.addEventListener('change', function() { atualizarApresentacaoAuto(); atualizarBriefingAuto(); });
+    document.getElementById('descricao_aula_outro')
+      ?.addEventListener('input', function() { atualizarApresentacaoAuto(); atualizarBriefingAuto(); });
+
+    document.getElementById('grupo_turma')
+      ?.addEventListener('change', atualizarDivisaoAuto);
+    ['divisao_turma', 'divisao_turma_outro'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('change', atualizarDivisaoAuto);
+      if (el) el.addEventListener('input',  atualizarDivisaoAuto);
+    });
 
     ['divisao_turma', 'divisao_turma_outro'].forEach(id => {
       const el = document.getElementById(id);
@@ -1185,6 +1235,7 @@
     _objsSelecionados.add(frase);
     searchInput.value = frase;
     dropdown.style.display = 'none';
+    atualizarApresentacaoAuto();
   }
 
   function removerLinhaObjetivo(btn) {
@@ -1198,6 +1249,7 @@
       hiddenInput.value = '';
       row.querySelector('.busca-obj-input').value = '';
     }
+    atualizarApresentacaoAuto();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -1430,6 +1482,14 @@
     document.getElementById('tab-btn-professores').textContent = fmt('Professores', totalProf);
     document.getElementById('tab-btn-monitores').textContent   = fmt('Monitores',   totalMon);
     document.getElementById('tab-btn-auxiliares').textContent  = fmt('Auxiliares',  totalAux);
+
+    const partes = [];
+    const pad = n => String(n).padStart(2, '0');
+    if (totalProf > 0) partes.push(`${pad(totalProf)} professores`);
+    if (totalMon  > 0) partes.push(`${pad(totalMon)} monitores`);
+    if (totalAux  > 0) partes.push(`${pad(totalAux)} auxiliares`);
+    const resumo = document.getElementById('resumo-rh');
+    if (resumo) resumo.textContent = partes.length ? `(${partes.join(', ')})` : '';
   }
 
   function expandirSubtipos(qtd) {
@@ -1496,9 +1556,14 @@
     'Debriefing no local da busca',
     'Debriefing reflexivo e feedback',
     'Exercício de mesa: Análise do material apreendido',
+    'Exercício de Mesa - DAMAZ',
     'Consolidação do Planejamento',
     'Orientações Finais e Debriefing',
-    'Preparação para audiência'
+    'Preparação para audiência',
+    'Execução do Cumprimento de MBA - DCIBER',
+    'Execução do Cumprimento de MBA - DAMAZ',
+    'Execução do Cumprimento de MBA - Previdenciário',
+    'Execução do Cumprimento de MBA - Operação Disney'
   ];
 
   // ── CONFIGURAÇÕES POR ATIVIDADE ────────────────────────────────
@@ -1737,6 +1802,8 @@
       <td class="td-acumulado" name="etapa_acumulado">0 min</td>
       <td class="text-center">
         <input type="hidden" name="etapa_detalhe" value="">
+        <input type="hidden" name="etapa_img" value="">
+        <input type="hidden" name="etapa_concluida" value="">
         <button type="button" class="btn btn-remover btn-sm"
                 onclick="removerEtapa(this)">✕</button>
       </td>`;
@@ -1755,11 +1822,327 @@
   }
 
   const textoPadraoEtapa = {
-    'Apresentação da Atividade':
-      'Os professores iniciam a aula com a apresentação à turma, seguida de breve contextualização do conteúdo no âmbito do módulo, situando a atividade em relação às unidades já desenvolvidas e ao contexto geral da disciplina.\n\n' +
-      'Na sequência, são expostos de forma objetiva os objetivos de aprendizagem, destacando as competências a serem desenvolvidas e a aplicação prática dos conhecimentos no decorrer da atividade proposta.\n\n' +
-      'Por fim, são apresentadas as diretrizes gerais da aula, incluindo a metodologia adotada, a dinâmica de participação e o papel do professor como orientador, reforçando a importância da participação ativa dos alunos, da cooperação em equipe e da adequada execução dos procedimentos.'
+    'Debriefing reflexivo e feedback':
+      'Descrição: Avaliação dos Professores/monitores, apresentando feedback da atividade, devendo ser breve e priorizando a avaliação de no máximo dois dos requisitos abaixo:\n' +
+      '• Planejamento;\n' +
+      '• Procedimento para inspeção das mídias digitais;\n' +
+      '• Formalização do procedimento – formalizar a execução da medida com o relato da ação e indicação dos achados de interesse da investigação – AUTORIA E MATERIALIDADE;\n' +
+      '• Documentar a coleta dos elementos de interesse e preservação da cadeia de custódia;\n' +
+      '• Elementos e circunstâncias que embasaram a prisão em flagrante do investigado e subsidiar representação por prisão preventiva;\n' +
+      '• Salvaguardar a vítima;\n' +
+      '• Discussão sobre erros, acertos e melhoria.',
+
+    'Tempo de Deslocamento':
+      'Os professores aproximados acompanharão suas equipes da saída da sala até a viatura, controlando o tempo de deslocamento a pé dos alunos, e seguirão, em dupla com outro professor aproximado, para a cidade cenográfica, visando acompanhar sua equipe com a maior brevidade possível. Deve comunicar a saída da equipe para que o monitor se posicione da melhor forma possível para observar o comportamento dos alunos desde sua chegada ao endereço da busca.',
+
+    'Gabarito do Exercício':
+      '• Apresentar, exclusivamente em slide, a Informação de Polícia Judiciária (IPJ) considerada gabarito (ANEXO I), ressaltando que não é autorizado qualquer registro fotográfico ou cópia desse documento.\n' +
+      '• Ressaltar que é expressamente proibido compartilhar informações e materiais produzidos com alunos de outras turmas, sob pena de Fato Observado negativo.',
+
+    'Apresentação dos Planos Elaborados Pelas Equipes':
+      '• Os professores, em suas respectivas salas, deverão solicitar que os chefes de equipe apresentem, sucintamente, o plano idealizado por sua equipe em até 5 minutos.\n' +
+      '• Neste momento não deverá ser aberta discussão ou críticas sobre os planejamentos (a fase destina-se apenas à exposição dos planejamentos pelos chefes de cada equipe).\n' +
+      '• Os professores e monitores devem ouvir atentamente os planejamentos apresentados pelas equipes para posteriores e pontuais comentários.\n' +
+      '• Quando faltar um minuto para acabar o tempo de exposição da equipe, orienta-se a sinalizar ao chefe expositor que resta 1 minuto.\n\n' +
+      'Descrição: Os chefes deverão apresentar ao grupo os planejamentos idealizados por suas equipes. Ainda que as equipes não tenham finalizado a fase anterior, os professores, em suas respectivas salas, deverão interromper a fase de planejamento assim que o tempo determinado para tal etapa for atingido, e solicitar que cada chefe apresente o planejamento idealizado por sua equipe. É importante que a apresentação seja feita apenas por um integrante da equipe — no caso o chefe — para que o tempo de 5 minutos não seja ultrapassado.',
+
+    'Procedimentos no EPol':
+      'Nesta etapa, a aula será conduzida pelo professor do ePol, seguindo os slides em tela.\n\n' +
+      '• Apresentar a contextualização desta etapa (slide com o esquema/fluxograma).\n' +
+      '• Ressaltar que o Inquérito Policial (IPL) de cada aluno já possui:\n' +
+      '  ◦ Portaria de Instauração;\n' +
+      '  ◦ IPJ produzida na Unidade 01 (fonte humana);\n' +
+      '  ◦ IPJ fornecida do exercício da Unidade 03 (vigilância);\n' +
+      '  ◦ IPJ produzida na Unidade 04 (análise celular).\n' +
+      '• Solicitar que acessem o ePol.\n' +
+      '• Seguir a descrição do exercício no slide.\n' +
+      '• Solicitar que cliquem em Tarefas no Menu Lateral e, em seguida, Tarefas dos Meus Casos.\n' +
+      '• Solicitar que localizem e abram a tarefa de análise do material apreendido e elaboração da IPJ.\n' +
+      '• Solicitar que alterem o progresso da tarefa.\n' +
+      '• Solicitar que registrem o deslacre do bem que será analisado, com a justificativa: "Para fins de análise de material apreendido".',
+
+    'Execução da audiência (segunda testemunha)':
+      'O monitor que atua como Técnico Judiciário irá chamar a segunda testemunha simulada faltante (que não recebeu as orientações do briefing) para entrar na sala, fechar a porta e então tomar assento ao lado esquerdo do Juiz.\n\n' +
+      'Todo o processo anterior se repetirá.\n\n' +
+      'Por fim, o aluno que atuou como testemunha tomará assento junto aos demais alunos e, na sequência, os professores e monitores passarão a conduzir a última etapa do exercício — Debriefing Reflexivo.',
+
+    'Execução da audiência (primeira testemunha)':
+      'Nesta etapa, o aluno, representando o policial que participou da investigação e da operação simulada, será inquirido. O foco das perguntas incidirá sobre a legalidade, a formalização e a coerência entre a prova investigativa (documentos da Operação Disney) e o depoimento judicial, conforme o contraditório e a ampla defesa previstos constitucionalmente.\n\n' +
+      'Os professores/monitores que desempenham os papéis de Juiz, Procurador da República e Advogados terão acesso às 03 cópias dos documentos produzidos nas fases da investigação (Termos de Arrecadação, IPJs, Relatórios de Diligência, Relatório Final, etc.).\n\n' +
+      'a) O Juiz (Garantidor da Legalidade e Condutor do Processo):\n' +
+      'O papel do Juiz é conduzir a audiência, garantir a observância das normas legais e dos direitos fundamentais, e buscar a verdade processual.\n\n' +
+      'Foco na higidez procedimental e fatos delitivos:\n' +
+      'a.1) Qualificação e Juramento: O Juiz iniciará a audiência qualificando a testemunha, colhendo seu juramento em dizer a verdade, sob as penas da lei (crime de falso testemunho, art. 342 do CP – pena de 3 a 8 anos), bem como questionando à testemunha se é amigo íntimo ou inimigo de algum dos réus, bem como se tem algum interesse pessoal em prejudicá-los. Ato contínuo, o Juiz passará a palavra ao Procurador da República para formular as perguntas diretamente a ela. Ao final, o juiz só pode complementar a inquirição sobre pontos que não foram esclarecidos pelas partes.\n\n' +
+      'Exemplo:\n' +
+      '"Senhor policial, esta audiência está sendo gravada. Por favor, declare seu nome completo, sua matrícula funcional, sua lotação atual na Polícia Federal e o cargo que ocupa?"\n' +
+      '"O senhor está sob o compromisso legal de dizer a verdade sobre tudo o que souber e lhe for perguntado. Se o senhor faltar com a verdade, omitir ou alterar fatos relevantes, poderá incorrer no crime de falso testemunho, previsto no Artigo 342 do Código Penal, com pena de reclusão de 3 (três) a 8 (oito) anos e multa. O senhor compreende este compromisso?"\n' +
+      '"O senhor é amigo íntimo ou inimigo de algum dos réus neste processo?"\n' +
+      '"O senhor possui algum interesse pessoal, direto ou indireto, no desfecho desta causa ou em prejudicar qualquer um dos réus?"\n\n' +
+      'Em prestado o compromisso legal em dizer a verdade e as demais perguntas sendo negativas, o Juiz passa a palavra ao representante do Ministério Público Federal.\n\n' +
+      'b) O Procurador da República (Acusação e Validação da Prova):\n' +
+      'O Procurador da República atuará para validar a prova investigativa e confirmar a materialidade e autoria do crime (Operação Disney).\n\n' +
+      'b.1) O Procurador da República solicitará à testemunha que resuma, em linhas gerais, como foi a investigação — como teve início, os pontos mais relevantes, as principais provas produzidas, os principais investigados e os resultados obtidos.\n\n' +
+      'Exemplo: "Senhor Policial Federal, explique, em linhas gerais, como foram conduzidas as investigações que levaram à Operação XXX. Como teve início, os pontos mais relevantes, as principais provas produzidas, os principais investigados e os resultados obtidos. Enfim, fique à vontade para explanar."\n\n' +
+      'c) O Advogado de Defesa (Contraditório, Descredibilizar as Provas e Busca por Nulidades):\n' +
+      'O Advogado de Defesa atuará de forma estratégica para questionar a legalidade dos procedimentos e a credibilidade da testemunha, buscando falhas que possam gerar nulidades e minimizar a importância das provas produzidas.\n\n' +
+      'Linhas de Questionamento:\n' +
+      'c.1) Conexão Probatória (IPJ e Relatório): O Advogado buscará fragilidades entre o depoimento do policial e os fatos registrados nas IPJs e Relatórios de Diligência.\n' +
+      '  ◦ Exemplo: "O que motivou a suspeita inicial que levou à representação pela busca? O senhor confirma que os itens listados no Termo de Apreensão eram idênticos àqueles descritos no Relatório de Análise de Bens Apreendidos?"\n' +
+      'c.2) Extração de Dados e Indícios: Perguntas sobre a relevância dos dados extraídos de eletrônicos apreendidos (via Cellebrite e IPED).\n' +
+      '  ◦ Exemplo: "A análise inicial dos dados extraídos dos aparelhos celulares apreendidos confirmou a articulação entre os investigados? Quais informações específicas foram cruciais para o desenvolvimento da investigação?"\n' +
+      'c.3) Conduta e Reações dos Alvos: Confirmação da dinâmica da busca e da conduta do alvo.\n' +
+      '  ◦ Exemplo: "O alvo colaborou? O senhor pode relatar se houve alguma declaração espontânea ou resistência por parte do investigado no momento da busca?"\n' +
+      'c.4) Incoerência e Contradição: O Advogado comparará o depoimento oral com os documentos escritos em busca de inconsistências.\n' +
+      '  ◦ Exemplo: "Seu depoimento difere do Relatório de Diligência no ponto em que... Qual dos dois está correto? O senhor elaborou o Relatório de Diligência logo após o encerramento da busca?"\n' +
+      'c.5) Quebra da Cadeia de Custódia: Questionamentos sobre a integridade da prova (Art. 158-A e seguintes do CPP).\n' +
+      '  ◦ Exemplo: "Onde e por quem os itens apreendidos foram armazenados antes de serem encaminhados à perícia? O senhor pode garantir que esses itens não foram manipulados ou alterados durante esse período?"\n' +
+      'c.6) Uso de Força e Abuso de Autoridade: Questionamentos sobre a postura do policial e a observância dos princípios de legalidade.\n' +
+      '  ◦ Exemplo: "Houve uso de algemas? Em caso positivo, qual o risco concreto de fuga ou integridade física que justificou o uso, conforme a Súmula Vinculante nº 11?"\n' +
+      'c.7) Legalidade da Apreensão: Questionamentos sobre a pertinência probatória de itens apreendidos.\n' +
+      '  ◦ Exemplo: "Por que foram apreendidos documentos pessoais que não tinham relação direta com a fraude mencionada no Mandado Judicial?"\n\n' +
+      'A dinâmica da inquirição força o policial-aluno a ir além da simples descrição dos fatos, exigindo segurança técnica, argumentação e clareza para sustentar a legalidade de cada ação praticada durante a fase investigativa.\n\n' +
+      'Em anexo ao presente roteiro será encaminhada a sugestão de quesitação, contendo as perguntas específicas que poderão ser formuladas pelo advogado.\n\n' +
+      'Ato 3 – Término da audiência de instrução e julgamento:\n' +
+      'Em terminando as perguntas por parte da Defesa e não havendo qualquer complemento a ser feito pelo Juízo, este declarará encerrada a audiência. Ato contínuo, o policial que atuou como testemunha deverá tomar assento junto aos demais alunos e aguardar a próxima audiência simulada.',
+
+    'Elaboração da IPJ':
+      '• Explicar que cada grupo deverá elaborar uma IPJ de natureza argumentativa relacionada ao seu alvo, comparando os dados obtidos com os demais elementos da investigação, a fim de analisar criticamente os fatos e apresentar conclusões sobre o caso.\n' +
+      '• Informar que, embora seja elaborada uma única IPJ por grupo, cada aluno deverá disponibilizá-la em seu respectivo IPL.\n' +
+      '• Informar que os arquivos necessários para esta etapa estão disponíveis no pen drive (Modelo de IPJ, documentos para análise, documentos de suporte).\n' +
+      '• Expor quais seriam os documentos para análise e de suporte.\n' +
+      '• Informar que cada grupo terá 45 (quarenta e cinco) minutos para elaborar uma Informação de Polícia Judiciária (IPJ) — Análise de Material Apreendido.',
+
+    'Execução do Cumprimento de MBA - Operação Disney':
+      '1° ATO: Após a execução das atividades anteriores (equipes divididas, cada uma com sua VTR e de posse da respectiva pasta), os alunos serão liberados, com intervalo rápido entre cada equipe, para iniciarem o deslocamento até a cidade cenográfica, direcionando-se até o endereço determinado no mandado de busca para o cumprimento das buscas. Para efeito do exercício, 06 horas da manhã será considerado 15 minutos após o início do deslocamento das equipes.\n\n' +
+      '• O professor coordenador avisará aos demais professores o horário de cumprimento de mandado e o horário final para deslocamento, considerando que o retorno ocorre em 10/15 minutos.\n' +
+      '• O tempo de debriefing aproximado deverá ser contabilizado dentro dos 100 minutos de execução do exercício.\n' +
+      '• Chegando ao local determinado, a equipe deverá aguardar dentro da viatura até o horário de início do cumprimento dos mandados. No cumprimento, deverão ser observadas as regras de segurança estabelecidas na aula de abordagem.\n\n' +
+      'Observação: Nesse momento, os professores deverão observar as técnicas de abordagem e atitudes dos alunos no cenário simulado, devendo intervir pontualmente, corrigindo caso necessário.\n\n' +
+      '2° ATO: Entrada no imóvel utilizando-se da modalidade não franqueada — ressaltar que a entrada deve ser rápida e a porta estará entreaberta.\n\n' +
+      'Observação: Todas as portas deverão estar entreabertas, a fim de evitar danos às portas das residências.\n\n' +
+      '• Após a tomada do ambiente e leitura do mandado ao morador, colhendo o ciente e recibo do mandado com data e hora, deverá ser convocada uma testemunha para acompanhar a diligência.\n\n' +
+      'Observação: É importante frisar que a lei prevê a convocação de duas testemunhas; todavia, para efeito do exercício será considerada somente uma testemunha.\n\n' +
+      '3° ATO: Com o acompanhamento da testemunha, realizar a busca por cômodos à procura pelas provas definidas no briefing.\n\n' +
+      '• Registro fotográfico e, se necessário, audiovisual dos locais onde os materiais forem apreendidos.\n\n' +
+      '4° ATO: Encerramento da busca e retorno à sala de aula.\n\n' +
+      '• Elaboração do auto de arrecadação.\n' +
+      '• O professor aproximado deverá estar atento às anotações no auto de arrecadação, que deverá ser discriminado de forma mais detalhada possível, com letra legível e inserção do número do lacre. Há tempo hábil para o preenchimento completo do auto.\n' +
+      '• Organização das provas apreendidas e observação da cadeia de custódia.\n' +
+      '• Certidão para as testemunhas, caso necessário.\n' +
+      '• Condução do preso em caso de MPP.\n\n' +
+      'O veículo que será apreendido no local servirá para deslocamento dos policiais que irão ceder lugar aos presos nos locais onde haverá cumprimento de MPP, sendo apreendido em sala.',
+
+    'Execução do Cumprimento de MBA - DCIBER':
+      'O professor recepciona a turma e apresenta a proposta da aula, que será dividida em duas etapas: simulação de cumprimento de mandado de busca em investigação sobre abuso sexual infanto-juvenil (Parte 1) e formalização dos procedimentos (Parte 2). Após, esclarece que os alunos percorrerão quatro momentos: briefing e conferência das pastas; execução do exercício na cidade cenográfica; formalização das peças em sala de aula; e, por fim, um debriefing reflexivo.\n\n' +
+      'Explicar brevemente os objetivos da aula:\n' +
+      '  ◦ EXECUTAR mandado de busca e apreensão de investigação de crimes cibernéticos relacionados ao abuso sexual de crianças e adolescentes, mediante entrada rápida (a porta deve estar entreaberta, para simular o arrombamento com um empurrão) e arregimentação de 1 testemunha;\n' +
+      '  ◦ IDENTIFICAR, no local de busca, os materiais relevantes para investigação, bem como as evidências digitais nos equipamentos do alvo, a fim de realizar a exploração de mídias digitais, arrecadação e eventual prisão em flagrante;\n' +
+      '  ◦ PROTEGER a criança e adolescente durante a execução da medida cautelar, por meio da identificação, afastamento do investigado, acolhimento e salvaguarda desses a um responsável legal.\n\n' +
+      'Descrição: A aula tem início com o professor acolhendo a turma e expondo de forma sucinta e objetiva os objetivos da atividade prática, esclarecendo que esta será estruturada em duas etapas. Na sequência, os alunos são informados de que a simulação corresponde ao cumprimento de mandado de busca e apreensão no contexto de uma investigação envolvendo abuso sexual infantojuvenil, sendo devidamente advertidos acerca das especificidades que caracterizam o cumprimento de mandados neste tipo de crime.\n\n' +
+      'Algumas peculiaridades da atuação em crimes cibernéticos envolvendo abuso infantojuvenil devem ser apresentadas pelo professor da temática:\n' +
+      '• Demonstrar a importância de entrada rápida/forçada tendo em vista a alta probabilidade de destruição de provas.\n' +
+      '• Considerando a natureza do delito, consistente em abuso sexual contra crianças e adolescentes, faz-se necessária atenção especial à segurança do próprio investigado, diante do risco de autolesão associado ao elevado impacto psicológico, ao estigma social e às graves consequências penais inerentes a esse tipo de imputação.\n' +
+      '• Informar que há casos em que os policiais vão se deparar com criança e/ou adolescente no local de busca. Logo, é importante identificá-los e afastá-los do ambiente de execução do mandado e do investigado, identificar responsável legal para guarda ou acionar o Conselho Tutelar, acolher a criança/adolescente e não a questionar sobre o fato criminoso (não é o local e nem o momento apropriado). No caso de revelação espontânea, ouvir passivamente e documentar o que ouviu nos exatos termos.\n' +
+      '• Frisar que nos crimes abrangidos pela DELECIBER, é essencial a autorização para manuseio e exploração preliminar dos equipamentos eletrônicos no local da busca, bem como o adequado tratamento das evidências encontradas.\n' +
+      '• Informar que poderão ser encontrados materiais de abuso sexual infantojuvenil armazenados em equipamentos eletrônicos durante a busca, o que ensejará o flagrante pela prática do art. 241-B do ECA (crime permanente).\n' +
+      '• Destacar a importância da análise preliminar da(s) mídia(s) no local de interesse, que serão fundamentais para a confecção da(s) IPJ(s) para fundamentar a prisão em flagrante e corroborar a investigação. Ressaltar a necessidade de a testemunha acompanhar todos os procedimentos no momento da busca, inclusive a exploração do celular.\n' +
+      '• Ressaltar a importância da identificação, por meio dos equipamentos explorados no local, de informações e dados que indiquem periculosidade do alvo e/ou a existência de crimes mais graves (compartilhamento de material, estupro, produção de material, venda etc.).\n\n' +
+      'O professor esclarece que o foco da aula não é "acertar todos os passos", mas tomar decisões fundamentadas, cooperar em equipe e vivenciar a dinâmica operacional, alinhando expectativas sobre a postura do docente: ele atuará como orientador, fazendo poucas intervenções e apenas quando houver risco à segurança ou desvio grave de procedimento.\n\n' +
+      'As equipes já estarão previamente divididas, sendo necessária a definição das funções — chefe de equipe (delegado), escrivão e agentes. Cada grupo será acompanhado por dois instrutores de APC, que apenas observarão, intervirão pontualmente e estimularão o raciocínio da equipe.',
+
+    'Exercício de mesa: Análise do material apreendido':
+      'Já com as equipes definidas e os malotes em mãos, os alunos terão que dialogar e discutir as ações que tomarão para cumprir os comandos da tarefa recebida.\n\n' +
+      '• O professor orienta cada equipe a conferir seu malote — contendo checklist, ficha do alvo, mandado judicial, auto circunstanciado, certidões, chaves de viaturas e demais documentos — mas não resolve dúvidas operacionais de maneira direta; ao contrário, provoca a reflexão: "Como vocês organizariam a equipe? O que priorizariam ao chegar ao local?".\n' +
+      '• O professor estimula ações para plano de contingência em caso de fuga ou resistência; definição de pontos de entrada e saída, zonas seguras e áreas de risco; e distribuição de funções operacionais: abordagem, segurança perimetral, coleta de provas, entrevista de testemunhas.\n' +
+      '• Os professores aproximados deverão auxiliar e direcionar os alunos tão somente quando perceberem que o exercício não está fluindo, intervindo com sugestões alternativas e questionando as decisões apresentadas pelos alunos, no intuito de alcançar o objetivo do simulado.',
+
+    'Exercício de Mesa - DAMAZ':
+      'Deslocamento da equipe para a fase do Exercício de mesa: Análise do material apreendido com utilização de sistemas.\n' +
+      '• Nos computadores fornecidos estarão disponíveis os sistemas BRASIL MAIS, Notebook LM e modelo de IPJ a ser confeccionado.\n\n' +
+      'Sistemas de análise do material\n\n' +
+      'A) BRASIL MAIS\n' +
+      '• Os alunos deverão observar os seguintes requisitos (conforme coordenadas no item 3.3.4 (53° 43\' 35" W; 8° 19\' 39" S)):\n' +
+      '     o Localizar, por meio das coordenadas, a Fazenda Serra Verde e a Madeireira São Jorge Ltda;\n' +
+      '     o Observar se houve exploração da Fazenda Serra Verde no período da AUTEX;\n' +
+      '     o Observar a distância entre Plano de Manejo declarado a e madeireira;\n' +
+      '     o Observar ao longo do tempo o aumento do desmatamento dentro da Terra Indígena Menkragnoti.\n\n' +
+      'B) NOTEBOOK-LM simulando o NEXO/SINAPSE (será entregue impresso)\n' +
+      '• Os alunos deverão observar os seguintes requisitos:\n' +
+      '     o Verificar as placas dos veículos declarados como meio de transporte nos DOFs. No DOF 1, a placa informada será de uma motocicleta para transportar as toras de madeira.\n\n' +
+      'Documentos analisados:\n' +
+      '• Autorização de Exploração da Fazenda Serra Verde\n' +
+      '     o Ao se informar as coordenadas da Fazenda Serra Verde no sistema Brasil Mais, será verificado que se trata de uma área não explorada. Ou seja, não saiu madeira dessa fazenda;\n' +
+      '     o Nota-se inclusive que a área fica dentro de uma Estação Ecológica de proteção integral, ou seja, não deveria ter autorização para exploração de produtos madeireiros.\n' +
+      '• Documento de Origem Florestal – DOF 01\n' +
+      '     o A distância e a rota são inviáveis para o transporte de madeiras;\n' +
+      '     o A placa do veículo é de moto (simulação de pesquisa no NEXO ou SINAPSE);\n' +
+      '     o A emissão do DOF ocorreu em um período em que a AUTEX estava suspensa.\n' +
+      '• Documento de Origem Florestal – DOF 02\n' +
+      '     o A distância e a rota são inviáveis para o transporte de madeiras;\n' +
+      '     o Os volumes de madeiras estão exatos e, na realidade, isso não é possível;\n' +
+      '     o Um único veículo foi colocado para transportar um grande volume de toras.\n\n' +
+      'Descrição: Ao retornarem para a sala, inicia-se o exercício de mesa, com a utilização de 10 computadores com acesso à internet, sendo 2 por equipe.',
+
+    'Consolidação do Planejamento':
+      'Os professores, em suas respectivas salas, deverão designar um líder e um sub-líder para cada grupo;\n' +
+      '• O líder de cada grupo deverá ser algum chefe de equipe;\n' +
+      '• O sub-líder de cada grupo deverá ser escolhido entre os membros da mesma equipe do líder;\n' +
+      '• O ideal é que alunos que já são policiais não atuem como líderes, sub-líderes ou chefes de equipe;\n' +
+      '• Líder e sub-líder deverão se dirigir à frente da sala e mediar/coordenar a conversa entre todas as equipes do grupo, objetivando definir o planejamento a ser executado no próximo exercício (unidade 3), ou seja, a forma como o grupo atuará, ao menos inicialmente (flexibilidade do planejamento), no cenário da unidade seguinte;\n' +
+      '• Tal etapa poderá ser finalizada extraclasse pelos alunos.\n\n' +
+      'Observações:\n' +
+      '• Tais regras são importantes para que o exercício da próxima unidade funcione bem (unidade 03-vigilância de alvos);\n' +
+      '• As regras mencionadas não precisam ser explicadas aos alunos, os quais apenas serão informados sobre a composição das equipes;\n' +
+      '• Os professores apenas deverão falar sobre a existência das figuras dos líderes e sub-líderes na última fase da aula - Fase da Consolidação do Planejamento (para não confundir os alunos).\n\n' +
+      'Descrição: A presente fase ocorrerá, de forma espelhada, dentro de cada sala de aula. Tal etapa poderá ser finalizada extraclasse (conforme tempo disponível). Nessa última fase da aula, as equipes, mediadas/coordenadas pelo líder e sub-líder do grupo, os quais deverão se dirigir à frente da sala, definirão o planejamento que será efetivamente executado no dia da aula da unidade 3 (vigilância de alvos). O objetivo é que o grupo, com base nas ideias expostas por todas as equipes na fase anterior, defina sua atuação no cenário da próxima unidade. O debriefing do exercício foi realizado na fase anterior em razão da grande probabilidade de que essa fase de consolidação seja finalizada extraclasse. Os alunos ficarão livres para criar grupos de WhatsApp próprios.',
+
+    'Planejamento do Acompanhamento de Alvos Pelas Equipes':
+      '• A partir dessa etapa o exercício estará se desenvolvendo, de forma espelhada, em 2 salas de aula (CHARLIE e FOX).\n' +
+      '• Cada grupo, em suas respectivas salas, estará acompanhado por 1 professor e 4 monitores durante a execução da atividade.\n' +
+      'Cada professor, em sua respectiva sala, deverá:\n' +
+      '• Designar um chefe para cada equipe.\n' +
+      '• Cada equipe deverá planejar como o grupo todo atuará no dia do exercício de vigilância (unidade 3). Cada equipe, nessa fase do exercício, deverá se considerar a equipe chefe/coordenadora do grupo e planejar a atuação de sua equipe e das demais no cenário do exercício da próxima aula.\n' +
+      '• O planejamento deverá ser realizado com base nos dados conhecidos e na possibilidade de prisão em flagrante.\n' +
+      '• O PATO DONALD da equipe CHARLIE costuma tomar café no COLORADO (informação obtida da fonte humana).\n' +
+      '• O PATO DONALD da equipe FOX costuma tomar café no FLAMINGO (informação obtida da fonte humana).\n' +
+      '• As equipes receberão croquis dos Postos Colorado/Flamingo e do Aeroporto JK (impressos e plastificados).\n' +
+      '• O professor deverá destacar a necessidade de cooperação, comunicação e protagonismo dos alunos.\n' +
+      '• Reforçar o papel do professor como orientador, intervindo apenas quando houver erro crítico, permitindo que os alunos se empenhem para refletir e discutir todos os aspectos que conseguirem considerar.\n\n' +
+      'Logo após a explicação dessa fase do exercício, o professor e monitores deverão se aproximar das equipes a fim de averiguar/confirmar se os alunos realmente entenderam que cada equipe deverá planejar a atuação de todas as equipes (cada equipe nesse momento deverá imaginar que é a chefe do grupo).\n\n' +
+      'Professor e monitores deverão estar sempre próximos às equipes, dirimindo dúvidas de execução do exercício e, dependendo do nível de dificuldade da equipe, sugerindo, em forma de perguntas, alguma ação pontual.\n\n' +
+      'Descrição: Cada equipe planejará de que forma o grupo todo, composto por 5 equipes, realizaria a ação de vigilância de alvos. Cada equipe, neste momento do exercício, planejará como se fosse a equipe chefe/coordenadora do grupo. Espera-se que as equipes, garantindo a discrição da ação e a segurança dos policiais envolvidos, planejem a forma de atuação do grupo, englobando pontos como: forma de comunicação do grupo/equipes; locais estratégicos para posicionamento das equipes; distribuição de equipes por alvos e outros. Nesta etapa os professores deverão sanar eventuais dúvidas sobre a forma de execução do exercício, porém, abster-se de planejar para os alunos. Os professores deverão apenas observar as discussões e os planejamentos, reforçando com os alunos que considerem todos os aspectos que julgarem pertinentes, bem como que, em fase posterior do exercício, haverá a consolidação do planejamento, podendo haver ajustes.',
+
+    'Consulta Banco de Dados Treino':
+      '• Orientar a realizar pesquisas relacionadas às informações constantes da Notícia de Fato e as obtidas junto à fonte humana, a fim de atestar sua verossimilhança, utilizando o banco de dados simulado, bem como buscar outras informações relevantes.\n' +
+      '• Disponibilizar por meio do Teams ou de pen drives, o link para acesso ao banco de dados treino.\n' +
+      '• Solicitar que os alunos realizem o acesso ao simulador de banco de dados treino e realizem as pesquisas, conforme instruções constantes no programa.\n' +
+      '• Enquanto os alunos realizam as pesquisas, os monitores (fontes humanas) deverão apresentar o feedback da atividade aos professores.',
+
+    'Protocolar Pje':
+      'O monitor do ePol orientará os alunos na criação de um PJE (Processo Judicial Eletrônico) em ambiente de treino e, na sequência, carregar as peças produzidas no exercício.',
+
+    'Criação do Registro de Fato (Epol)':
+      'O monitor do ePol orientará os alunos na criação de um RDF (Registro de Fato) relacionado ao cumprimento da medida. Cada aluno deverá carregar as peças criadas no respectivo procedimento.',
+
+    'Criação de Registro Especial (Epol)':
+      'O monitor do ePol orientará os alunos na criação de um RE (Registro Especial) relacionado ao cumprimento da medida. Cada aluno deverá carregar as peças criadas no respectivo procedimento.',
+
+    'Criação do Inquérito Policial (Epol)':
+      'O monitor do ePol orientará os alunos na criação de um IPL (Inquérito Policial) relacionado ao cumprimento da medida. Cada aluno deverá carregar as peças criadas no respectivo procedimento.',
+
+    'Simulação de Entrevista com Fonte Humana':
+      '• Relembrar que enquanto as duplas da equipe CHARLIE entrevistam a fonte humana, as da equipe FOX permanecerão em sala de aula, a fim de que cada aluno crie o seu Registro de Fato (RDF) no ePol e que ao término do tempo fixado para esta etapa, as equipes inverterão as atividades.\n' +
+      '• Orientar que cada dupla da equipe CHARLIE deve acautelar 01 (uma) prancheta e levar 01 (uma) folha em branco e 01 (uma) caneta para a realização da entrevista.\n' +
+      '• Orientar que as duplas da equipe CHARLIE deverão deslocar-se até o entorno do Teatro de Arena ou ao corredor, entre os blocos E e K, selecionar aleatoriamente uma única fonte humana dentre as posicionadas no local (conforme imagem ilustrativa constante do slide) e entrevistá-la, observando o tempo de 20 minutos fixado para esta etapa, incluídos os deslocamentos de ida e volta à sala de aula.\n' +
+      '• Solicitar que as duplas da equipe CHARLIE, acompanhadas de 01 (um) dos professores, iniciem o deslocamento.\n' +
+      '• O professor que acompanhar a equipe CHARLIE deve controlar o tempo de 20 (vinte) minutos destinado a esta etapa, incluindo os deslocamentos de ida e volta à sala de aula.\n' +
+      '• Além de controlar o tempo, o professor designado deverá acompanhar, na medida do possível, as duplas durante as entrevistas com as fontes humanas, a fim de subsidiar o feedback a ser apresentado ao final da aula. As duplas deverão retornar à sala de aula assim que concluírem a entrevista, mesmo que isso ocorra antes do prazo estabelecido.\n' +
+      '• Simultaneamente, o outro professor deverá permanecer em sala de aula orientando as duplas da equipe FOX para a elaboração do Registro de Fato (RDF) no sistema ePol. A condução da aula será assumida pelos monitores ePol.\n' +
+      '• Após o retorno das duplas da equipe CHARLIE à sala de aula, deverá ser realizada a inversão das atividades.\n' +
+      '• As duplas da equipe FOX deverão deslocar-se até o entorno do Teatro de Arena ou ao corredor, entre os blocos E e K, para entrevistar as fontes humanas, acompanhadas por 01 (um) dos professores, observando o mesmo procedimento adotado anteriormente.\n' +
+      '• Simultaneamente, os alunos da equipe CHARLIE permanecerão em sala de aula elaborando seus respectivos Registro de Fato (RDF) no ePol, sob orientação do outro professor e condução da aula será assumida pelos monitores ePol.',
+
+    'Elaboração dos Questionamentos':
+      '• Apresentar novamente a Notícia de Fato.\n' +
+      '• Solicitar que, com base na Notícia de Fato oriunda do Comunica PF, cada dupla elabore questionamentos objetivos e assertivos para entrevistar a fonte humana (PATOLINO), visando à obtenção do maior número possível de informações no tempo fixado para esta etapa.\n' +
+      '• Informar que terão 5 (cinco) minutos para elaborarem os questionamentos.\n' +
+      '• Ressaltar que perguntas pouco objetivas ou imprecisas podem prejudicar a coleta de informações junto à fonte humana, impactando a análise, o juízo preliminar de verossimilhança e a definição de uma linha investigativa coerente.\n' +
+      '• Ressaltar que a espontaneidade da fonte humana indica disposição em colaborar com eventual investigação, portanto, a entrevista deve ser conduzida de forma técnica, respeitosa e objetiva.'
   };
+
+  const _apresentAutoRows = new Set();
+
+  function _textoApresentacaoAtividade() {
+    var descricao = _valorDescricaoAula();
+    var objs = _valorObjetivos();
+    var objStr = objs.length
+      ? '\n' + objs.map(function(o) { return '- ' + o; }).join(';\n') + '.'
+      : ' ___.';
+    return 'Os professores iniciam a aula com a apresentação à turma, seguida de breve contextualização do conteúdo no âmbito do módulo, explicando que a aula de ' + descricao + ' terá os seguintes objetivos:' + objStr + '\n\n' +
+      'Na sequência, são expostos de forma objetiva os objetivos de aprendizagem, destacando as competências a serem desenvolvidas e a aplicação prática dos conhecimentos no decorrer da atividade proposta.\n\n' +
+      'Por fim, são apresentadas as diretrizes gerais da aula, incluindo a metodologia adotada, a dinâmica de participação e o papel do professor como orientador, reforçando a importância da participação ativa dos alunos, da cooperação em equipe e da adequada execução dos procedimentos.';
+  }
+
+  function atualizarApresentacaoAuto() {
+    _apresentAutoRows.forEach(function(rowId) {
+      var detDiv = document.querySelector('#detalhes-etapas [data-row-id="' + rowId + '"]');
+      if (!detDiv) { _apresentAutoRows.delete(rowId); return; }
+      var ta = detDiv.querySelector('textarea');
+      if (!ta) return;
+      var novoTexto = _textoApresentacaoAtividade();
+      ta.value = novoTexto;
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+      var tr = document.querySelector('#estrutura-body tr[data-row-id="' + rowId + '"]');
+      if (tr) {
+        var hidden = tr.querySelector('[name=etapa_detalhe]');
+        if (hidden) hidden.value = novoTexto;
+      }
+    });
+  }
+
+  const _briefingAutoRows = new Set();
+
+  function _textoBriefingMalotes() {
+    var descricao = _valorDescricaoAula();
+    return 'Apresentação objetiva da investigação: ' + descricao + ', identificação de fraudes a partir da análise documental, correta observância da cadeia de custódia da madeira.\n\n' +
+      '• Identificação do alvo e objetivos da busca.\n\n' +
+      'Entrega das pastas e conferência do material:\n' +
+      '  ◦ Mandado de Busca e Apreensão;\n' +
+      '  ◦ Justificativa para o uso de algemas (documento padrão);\n' +
+      '  ◦ Ficha do Alvo (com coordenadas, fotos do local, descrição do cenário);\n' +
+      '  ◦ Roteiro de procedimentos para cumprimento de mandado;\n' +
+      '  ◦ Chave da viatura com identificação da equipe;\n' +
+      '  ◦ Auto Circunstanciado de Busca e Arrecadação;\n' +
+      '  ◦ Certidão de Arregimentação de Testemunha;\n' +
+      '  ◦ 01 página de etiquetas adesivas;\n' +
+      '  ◦ 04 envelopes de perícia com lacres;\n' +
+      '  ◦ 01 Envelope/fichas com Autorização de Exploração – AUTEX e Documento de Origem Florestal – DOF (itens modelos);\n' +
+      '  ◦ Mapa ou croqui da área Off-Road, se aplicável, e rotas traçadas até os locais das buscas;\n' +
+      '  ◦ Checklist do conteúdo da pasta.\n\n' +
+      '• Professores não dão respostas diretas; provocam a equipe ("Como vocês organizariam a busca?", "O que é prioritário?").\n\n' +
+      'Descrição: Com as equipes organizadas, inicia-se o briefing da operação. O professor apresenta, de forma curta e operacional, o histórico do caso, contextualizando a investigação. Ele resume os principais elementos probatórios a serem identificados, como os documentos denominados Autorização de Exploração – AUTEX e Documento de Origem Florestal – DOFs, os quais podem apresentar inconsistências. Em seguida, destaca informações sobre o alvo, cujo padrão de atuação motivou a representação pela medida cautelar de busca e apreensão.';
+  }
+
+  function atualizarBriefingAuto() {
+    _briefingAutoRows.forEach(function(rowId) {
+      var detDiv = document.querySelector('#detalhes-etapas [data-row-id="' + rowId + '"]');
+      if (!detDiv) { _briefingAutoRows.delete(rowId); return; }
+      var ta = detDiv.querySelector('textarea');
+      if (!ta) return;
+      var novoTexto = _textoBriefingMalotes();
+      ta.value = novoTexto;
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+      var tr = document.querySelector('#estrutura-body tr[data-row-id="' + rowId + '"]');
+      if (tr) { var hidden = tr.querySelector('[name=etapa_detalhe]'); if (hidden) hidden.value = novoTexto; }
+    });
+  }
+
+  const _divisaoAutoRows = new Set();
+
+  function _textoDivisaoTurma() {
+    var grupo   = _valorGrupoTurma();
+    var divisao = _valorDivisao() !== '___' ? _valorDivisao() : '';
+    var linha1 = 'A Turma será dividida em dois grupos com quantidade igual ou aproximada' + (grupo ? ' (' + grupo + ')' : '') + '.';
+    var linha2 = divisao ? 'Além disso, também haverá divisão (' + divisao + ').' : '';
+    return 'Antes do início do exercício ocorrerá a divisão dos alunos da seguinte forma:\n\n' + linha1 + (linha2 ? ' ' + linha2 : '');
+  }
+
+  function atualizarDivisaoAuto() {
+    _divisaoAutoRows.forEach(function(rowId) {
+      var detDiv = document.querySelector('#detalhes-etapas [data-row-id="' + rowId + '"]');
+      if (!detDiv) { _divisaoAutoRows.delete(rowId); return; }
+      var ta = detDiv.querySelector('textarea');
+      if (!ta) return;
+      var novoTexto = _textoDivisaoTurma();
+      ta.value = novoTexto;
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+      var tr = document.querySelector('#estrutura-body tr[data-row-id="' + rowId + '"]');
+      if (tr) { var hidden = tr.querySelector('[name=etapa_detalhe]'); if (hidden) hidden.value = novoTexto; }
+    });
+  }
 
   const _orgEquipesAutoRows = new Set();
 
@@ -1789,7 +2172,7 @@
 
   function _textoDeslocamento() {
     var local = _valorLocal();
-    return 'A etapa consiste no deslocamento organizado dos alunos até ' + local + ', local em que será desenvolvida a atividade prática. O professor orienta quanto aos procedimentos de deslocamento, destacando aspectos de segurança (velocidade permitida), disciplina e organização. Esse momento também é utilizado para preparar os alunos para a execução da atividade, garantindo que todos estejam devidamente posicionados e cientes do início das ações.';
+    return 'A etapa consiste no deslocamento organizado dos alunos da Sala de Aula até o local em que será desenvolvida a atividade prática (' + local + '). O professor orienta quanto aos procedimentos de deslocamento, destacando aspectos de segurança (velocidade permitida), disciplina e organização. Esse momento também é utilizado para preparar os alunos para a execução da atividade, garantindo que todos estejam devidamente posicionados e cientes do início das ações.';
   }
 
   function atualizarDeslocamentoAuto() {
@@ -1809,8 +2192,18 @@
   }
 
   function onEtapaNomeChange(sel) {
-    console.log('[PLANO] onEtapaNomeChange chamado, valor:', sel.value);
     const tr = sel.closest('tr');
+    const rowId = tr.dataset.rowId;
+    _apresentAutoRows.delete(rowId);
+    _briefingAutoRows.delete(rowId);
+    _divisaoAutoRows.delete(rowId);
+    _orgEquipesAutoRows.delete(rowId);
+    _deslocAutoRows.delete(rowId);
+    const existingDiv = document.querySelector('#detalhes-etapas [data-row-id="' + rowId + '"]');
+    if (existingDiv) {
+      const ta = existingDiv.querySelector('textarea');
+      if (ta) ta.value = '';
+    }
     const outro = tr.querySelector('[name=etapa_nome_outro]');
     outro.style.display = sel.value === '__outro__' ? '' : 'none';
     if (sel.value === '__outro__') outro.focus();
@@ -1846,24 +2239,48 @@
       }
 
       num++;
-      var isOrg    = (nome === 'Organização das Equipes');
-      var isDesloc = (nome === 'Deslocamento das Equipes');
+      var isOrg      = (nome === 'Organização das Equipes');
+      var isDesloc   = (nome === 'Deslocamento das Equipes');
+      var isApresent = (nome === 'Apresentação da Atividade');
+      var isDivisao  = (nome === 'Divisão da Turma');
+      var isBriefing = (nome === 'Briefing e Entrega dos Malotes');
       var isAutoFill = false;
       var texto;
       if (_preloadDetalhes.has(rowId)) {
         texto = _preloadDetalhes.get(rowId);
         _preloadDetalhes.delete(rowId);
+      } else if (isApresent && _apresentAutoRows.has(rowId)) {
+        texto = _textoApresentacaoAtividade();
+        isAutoFill = true;
+      } else if (isBriefing && _briefingAutoRows.has(rowId)) {
+        texto = _textoBriefingMalotes();
+        isAutoFill = true;
+      } else if (isDivisao && _divisaoAutoRows.has(rowId)) {
+        texto = _textoDivisaoTurma();
+        isAutoFill = true;
       } else if (isOrg && _orgEquipesAutoRows.has(rowId)) {
         texto = _textoOrganizacaoEquipes();
         isAutoFill = true;
       } else if (isDesloc && _deslocAutoRows.has(rowId)) {
         texto = _textoDeslocamento();
         isAutoFill = true;
-      } else if (textos[rowId] !== undefined) {
+      } else if (textos[rowId]) {
         texto = textos[rowId];
       } else {
         texto = (textoPadraoEtapa[nome] || '');
-        if (isOrg) {
+        if (isApresent) {
+          texto = _textoApresentacaoAtividade();
+          _apresentAutoRows.add(rowId);
+          isAutoFill = true;
+        } else if (isBriefing) {
+          texto = _textoBriefingMalotes();
+          _briefingAutoRows.add(rowId);
+          isAutoFill = true;
+        } else if (isDivisao) {
+          texto = _textoDivisaoTurma();
+          _divisaoAutoRows.add(rowId);
+          isAutoFill = true;
+        } else if (isOrg) {
           texto = _textoOrganizacaoEquipes();
           _orgEquipesAutoRows.add(rowId);
           isAutoFill = true;
@@ -1874,13 +2291,21 @@
         }
       }
 
+      var concluindaInput = tr.querySelector('[name=etapa_concluida]');
+      var concluida = concluindaInput ? concluindaInput.value === '1' : false;
+
       var titulo = document.createElement('div');
-      titulo.className = 'subsecao-titulo mb-2';
-      titulo.textContent = '4.' + num + ' ' + nome;
+      titulo.className = 'mb-2';
+      titulo.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:#1a3a5c;color:#D4AF37;padding:8px 14px;border-radius:5px;font-weight:600;font-size:0.88rem;';
+      titulo.innerHTML = '<span>4.' + num + ' ' + nome + '</span>' +
+        '<span class="etapa-tick-titulo" style="color:#22c55e;font-size:1.3rem;font-weight:bold;' +
+        (concluida ? '' : 'display:none;') + '">&#10003;</span>';
 
       var ta = document.createElement('textarea');
       ta.className = 'form-control';
-      ta.rows = 4;
+      ta.style.overflow = 'hidden';
+      ta.style.resize = 'none';
+      ta.style.minHeight = '80px';
       ta.placeholder = 'Descreva as atividades desta etapa...';
       ta.value = texto;
 
@@ -1890,21 +2315,81 @@
       div.appendChild(titulo);
       div.appendChild(ta);
 
+      function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+
       if (hiddenInput) hiddenInput.value = texto;
-      (function(ta, hiddenInput, rowIdLocal, isAutoFillLocal, isOrgLocal, isDeslocLocal) {
+      (function(ta, hiddenInput, rowIdLocal, isAutoFillLocal, isOrgLocal, isDeslocLocal, isApresentLocal, isDivisaoLocal, isBriefingLocal) {
         ta.addEventListener('input', function() {
           if (hiddenInput) hiddenInput.value = ta.value;
+          autoResize(ta);
         });
         if (isAutoFillLocal) {
           ta.addEventListener('input', function() {
-            if (isOrgLocal)    _orgEquipesAutoRows.delete(rowIdLocal);
-            if (isDeslocLocal) _deslocAutoRows.delete(rowIdLocal);
+            if (isApresentLocal) _apresentAutoRows.delete(rowIdLocal);
+            if (isBriefingLocal) _briefingAutoRows.delete(rowIdLocal);
+            if (isDivisaoLocal)  _divisaoAutoRows.delete(rowIdLocal);
+            if (isOrgLocal)      _orgEquipesAutoRows.delete(rowIdLocal);
+            if (isDeslocLocal)   _deslocAutoRows.delete(rowIdLocal);
           }, { once: true });
         }
-      })(ta, hiddenInput, rowId, isAutoFill, isOrg, isDesloc);
+      })(ta, hiddenInput, rowId, isAutoFill, isOrg, isDesloc, isApresent, isDivisao, isBriefing);
+
+      // Seção de imagem
+      var imgInput = tr.querySelector('[name=etapa_img]');
+      var imgFilenames = (imgInput && imgInput.value) ? imgInput.value.split('|').filter(function(f){ return f.trim(); }) : [];
+      var imgSection = document.createElement('div');
+      imgSection.className = 'mt-2';
+      var imgTopRow = document.createElement('div');
+      imgTopRow.className = 'd-flex align-items-center gap-2 flex-wrap';
+      var imgBtn = document.createElement('button');
+      imgBtn.type = 'button';
+      imgBtn.style.cssText = 'font-size:0.8rem;border:1px dashed #2d6a9f;color:#2d6a9f;background:#f0f6ff;border-radius:6px;padding:3px 12px;cursor:pointer;';
+      imgBtn.innerHTML = '&#128247; Imagens' + (imgFilenames.length ? ' (' + imgFilenames.length + ')' : '');
+      (function(rid) { imgBtn.onclick = function() { abrirSeletorImagem(rid); }; })(rowId);
+      imgTopRow.appendChild(imgBtn);
+      imgSection.appendChild(imgTopRow);
+      if (imgFilenames.length) {
+        var previews = document.createElement('div');
+        previews.className = 'd-flex flex-wrap gap-2 mt-1';
+        imgFilenames.forEach(function(fn) {
+          var item = document.createElement('div');
+          item.className = 'd-flex align-items-center gap-1';
+          item.style.cssText = 'border:1px solid #ddd;border-radius:4px;padding:3px 6px;background:#fafafa;';
+          item.innerHTML = '<img src="/imagens/' + encodeURIComponent(fn) + '" style="max-height:48px;max-width:80px;border-radius:3px;">' +
+            '<span style="font-size:0.7rem;color:#555;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + fn + '">' + fn + '</span>' +
+            '<button type="button" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:0.9rem;padding:0 2px;" onclick="removerImagemEtapa(\'' + rowId + '\',\'' + fn.replace(/'/g, "\\'") + '\')">✕</button>';
+          previews.appendChild(item);
+        });
+        imgSection.appendChild(previews);
+      }
+      div.appendChild(imgSection);
+
+      var evolucaoDiv = document.createElement('div');
+      evolucaoDiv.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:10px;padding:6px 10px;border:1px solid #d0d5dd;border-radius:6px;background:#f8f9fa;';
+      var evolucaoLabel = document.createElement('span');
+      evolucaoLabel.textContent = 'Evolução';
+      evolucaoLabel.style.cssText = 'font-size:0.82rem;font-weight:600;color:#444;';
+      var btnConcluir = document.createElement('button');
+      btnConcluir.type = 'button';
+      btnConcluir.className = 'etapa-btn-concluir';
+      btnConcluir.style.cssText = 'width:26px;height:26px;border-radius:50%;font-size:1rem;font-weight:bold;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;justify-content:center;transition:all 0.15s;' +
+        (concluida ? 'border:2px solid #22c55e;background:#22c55e;color:#fff;' : 'border:2px solid #22c55e;background:transparent;color:#22c55e;');
+      btnConcluir.innerHTML = '&#10003;';
+      btnConcluir.title = concluida ? 'Concluído — clique para desmarcar' : 'Marcar como concluído';
+      (function(rid) { btnConcluir.onclick = function() { marcarEtapaConcluida(rid); }; })(rowId);
+      evolucaoDiv.appendChild(evolucaoLabel);
+      evolucaoDiv.appendChild(btnConcluir);
+      div.appendChild(evolucaoDiv);
 
       container.appendChild(div);
     }
+
+    requestAnimationFrame(function() {
+      container.querySelectorAll('textarea').forEach(function(t) {
+        t.style.height = 'auto';
+        t.style.height = t.scrollHeight + 'px';
+      });
+    });
   }
 
   function adicionarEtapa() {
@@ -1942,7 +2427,86 @@
       acumulado += tempo;
       tr.querySelector('[name=etapa_acumulado]').textContent = acumulado + ' min';
     });
-    document.getElementById('estrutura-total').textContent = acumulado + ' min';
+    const totalEl = document.getElementById('estrutura-total');
+    totalEl.textContent = acumulado + ' min';
+    const cargaRaw = (document.getElementById('carga_horaria')?.value || '').replace(/[^0-9]/g, '');
+    const cargaMin = parseInt(cargaRaw) || 0;
+    if (cargaMin > 0 && acumulado > cargaMin) {
+      totalEl.style.color = '#dc3545';
+    } else {
+      totalEl.style.color = '';
+    }
+  }
+
+  function marcarEtapaConcluida(rowId) {
+    var tr = document.querySelector('#estrutura-body tr[data-row-id="' + rowId + '"]');
+    var input = tr ? tr.querySelector('[name=etapa_concluida]') : null;
+    var concluida = input ? input.value === '1' : false;
+    concluida = !concluida;
+    if (input) input.value = concluida ? '1' : '';
+
+    var detDiv = document.querySelector('#detalhes-etapas [data-row-id="' + rowId + '"]');
+    if (!detDiv) return;
+
+    var tickTit = detDiv.querySelector('.etapa-tick-titulo');
+    if (tickTit) tickTit.style.display = concluida ? 'inline-block' : 'none';
+
+    var btn = detDiv.querySelector('.etapa-btn-concluir');
+    if (btn) {
+      btn.style.background = concluida ? '#22c55e' : 'transparent';
+      btn.style.color = concluida ? '#fff' : '#22c55e';
+      btn.title = concluida ? 'Concluído — clique para desmarcar' : 'Marcar como concluído';
+    }
+  }
+
+  // ── SELETOR DE IMAGEM ────────────────────────────────────────────
+  var _rowIdSeletorImagem = null;
+
+  function _imgsSelecionadasDaLinha(rowId) {
+    var tr = document.querySelector('#estrutura-body [data-row-id="' + rowId + '"]');
+    if (!tr) return [];
+    var input = tr.querySelector('[name=etapa_img]');
+    if (!input || !input.value) return [];
+    return input.value.split('|').filter(function(f) { return f.trim(); });
+  }
+
+  function _setImgsSelecionadas(rowId, arr) {
+    var tr = document.querySelector('#estrutura-body [data-row-id="' + rowId + '"]');
+    if (!tr) return;
+    var input = tr.querySelector('[name=etapa_img]');
+    if (input) input.value = arr.join('|');
+  }
+
+  function abrirSeletorImagem(rowId) {
+    _rowIdSeletorImagem = rowId;
+    new bootstrap.Modal(document.getElementById('modalSeletorImagem')).show();
+  }
+
+  function toggleImagemEtapa(filename) {
+    if (!_rowIdSeletorImagem) return;
+    var atual = _imgsSelecionadasDaLinha(_rowIdSeletorImagem);
+    var idx = atual.indexOf(filename);
+    if (idx >= 0) atual.splice(idx, 1);
+    else atual.push(filename);
+    _setImgsSelecionadas(_rowIdSeletorImagem, atual);
+    _atualizarSelecaoGrade();
+    sincronizarDetalhes();
+  }
+
+  function _atualizarSelecaoGrade() {
+    if (!_rowIdSeletorImagem) return;
+    var selecionadas = _imgsSelecionadasDaLinha(_rowIdSeletorImagem);
+    document.querySelectorAll('#grade-imagens [data-filename]').forEach(function(card) {
+      var sel = selecionadas.indexOf(card.dataset.filename) >= 0;
+      card.style.borderColor = sel ? '#2d6a9f' : 'transparent';
+      card.style.background  = sel ? '#e8f0fe' : '';
+    });
+  }
+
+  function removerImagemEtapa(rowId, filename) {
+    var atual = _imgsSelecionadasDaLinha(rowId);
+    _setImgsSelecionadas(rowId, atual.filter(function(f) { return f !== filename; }));
+    sincronizarDetalhes();
   }
 
   // Inicia com uma linha vazia
@@ -1950,8 +2514,87 @@
     adicionarEtapa();
     // Aguarda o browser restaurar valores de formulário antes de sincronizar
     setTimeout(sincronizarDetalhes, 150);
+
+    // Carrega thumbnails ao abrir o modal de imagens
+    document.getElementById('modalSeletorImagem').addEventListener('show.bs.modal', function() {
+      var grade = document.getElementById('grade-imagens');
+      grade.innerHTML = '<p class="text-muted small">Carregando imagens...</p>';
+      fetch('/imagens')
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function(imgs) {
+          grade.innerHTML = '';
+          if (!imgs.length) { grade.innerHTML = '<p class="text-muted small">Nenhuma imagem encontrada.</p>'; return; }
+          imgs.forEach(function(filename) {
+            var card = document.createElement('div');
+            card.dataset.filename = filename;
+            card.style.cssText = 'cursor:pointer;border:2px solid transparent;border-radius:6px;padding:6px;text-align:center;transition:border-color .15s,background .15s;';
+            card.innerHTML = '<img src="/imagens/' + encodeURIComponent(filename) + '" style="max-width:130px;max-height:110px;display:block;margin:0 auto;border-radius:4px;">' +
+              '<div style="font-size:0.7rem;color:#555;margin-top:4px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + filename + '">' + filename + '</div>';
+            card.addEventListener('click', function() { toggleImagemEtapa(filename); });
+            grade.appendChild(card);
+          });
+          _atualizarSelecaoGrade();
+        })
+        .catch(function(err) {
+          grade.innerHTML = '<p class="text-danger small">Erro ao carregar imagens: ' + err.message + '. Reinicie o servidor.</p>';
+        });
+    });
   });
   // ────────────────────────────────────────────────────────────────
+
+  function togglePrepNaoHa() {
+    const btn = document.getElementById('btn-prep-nao-ha');
+    const input = document.getElementById('prep-cenario-nao-ha-input');
+    const lista = document.getElementById('lista-prep-cenario');
+    const ativo = input.value === '1';
+    if (ativo) {
+      input.value = '';
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    } else {
+      input.value = '1';
+      btn.style.background = '#1a3a5c';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#1a3a5c';
+      lista.innerHTML = '';
+    }
+  }
+
+  function adicionarPrepCenario() {
+    const input = document.getElementById('prep-cenario-nao-ha-input');
+    const btn = document.getElementById('btn-prep-nao-ha');
+    if (input.value === '1') {
+      input.value = '';
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }
+    const lista = document.getElementById('lista-prep-cenario');
+    const idx = lista.querySelectorAll('.verif-row').length + 1;
+    const div = document.createElement('div');
+    div.className = 'verif-row mb-2';
+    div.innerHTML = `
+      <label class="form-label mb-1" style="font-size:0.82rem;font-weight:600;">3.3.${idx}</label>
+      <textarea class="form-control" name="prep_cenario_item" rows="2" placeholder="Descreva o item ${idx} da preparação do cenário..."></textarea>
+      <button type="button" class="btn-remover-verif" onclick="removerPrepCenario(this)">✕</button>`;
+    lista.appendChild(div);
+    div.querySelector('textarea').focus();
+  }
+
+  function removerPrepCenario(btn) {
+    btn.closest('.verif-row').remove();
+    const lista = document.getElementById('lista-prep-cenario');
+    lista.querySelectorAll('.verif-row').forEach(function(row, i) {
+      const lbl = row.querySelector('label');
+      if (lbl) lbl.textContent = '3.3.' + (i + 1);
+      const ta = row.querySelector('textarea');
+      if (ta) ta.placeholder = 'Descreva o item ' + (i + 1) + ' da preparação do cenário...';
+    });
+  }
 
   function adicionarRessalva() {
     const lista = document.getElementById('lista-ressalvas');
@@ -2065,6 +2708,7 @@
   function calcularCarga() {
     const horas = parseInt(document.getElementById('horas_aula').value) || 0;
     document.getElementById('carga_horaria').value = horas ? horas * 50 + ' min' : '';
+    recalcularEstrutura();
   }
 
   function toggleSecao(header) {
@@ -2098,12 +2742,15 @@
 
   function salvarProjeto() {
     const modal = new bootstrap.Modal(document.getElementById('modalSalvar'));
+    const savedUsuario = localStorage.getItem('usuario_salvo') || '';
+    document.getElementById('inputUsuario').value = savedUsuario;
     modal.show();
   }
 
   async function confirmarSalvar() {
     const nome = document.getElementById('inputNomeProjeto').value.trim() || 'Sem título';
     const usuario = document.getElementById('inputUsuario').value.trim() || '';
+    if (usuario) localStorage.setItem('usuario_salvo', usuario);
     const status = document.getElementById('selectStatusProjeto').value;
     const dados = coletarDadosFormulario();
     const payload = { nome, usuario, status, dados };
@@ -2184,14 +2831,30 @@
       _enfasesSelecionadas.add(f);
     });
 
+    // Restaurar linhas de etapa — criar a quantidade certa ANTES de setar valores
+    const etapasNomesSalvos = dados.etapa_nome
+      ? (Array.isArray(dados.etapa_nome) ? dados.etapa_nome : [dados.etapa_nome])
+      : [];
+    const tbody = document.getElementById('estrutura-body');
+    tbody.innerHTML = '';
+    const numEtapas = Math.max(1, etapasNomesSalvos.length);
+    for (let i = 0; i < numEtapas; i++) tbody.appendChild(_criarLinhaEtapa());
+    recalcularEstrutura();
+
     for (const [k, v] of Object.entries(dados)) {
       if (k === 'obj_verbo' || k === 'obj_verbo_outro' || k === 'obj_complemento' ||
           k === 'enfase_noun' || k === 'enfase_comp') continue;
       const els = form.querySelectorAll(`[name="${k}"]`);
       if (!els.length) continue;
-      if (els.length === 1) { els[0].value = v; if (els[0].tagName === 'SELECT') els[0].dispatchEvent(new Event('change')); }
-      else { const vals = Array.isArray(v) ? v : [v]; els.forEach((el, i) => { if (vals[i] !== undefined) el.value = vals[i]; }); }
+      const vals = Array.isArray(v) ? v : [v];
+      if (els.length === 1) {
+        els[0].value = vals[0] !== undefined ? vals[0] : '';
+        if (els[0].tagName === 'SELECT') els[0].dispatchEvent(new Event('change'));
+      } else {
+        els.forEach((el, i) => { if (vals[i] !== undefined) el.value = vals[i]; });
+      }
     }
+    sincronizarDetalhes();
     toggleSidebar();
     alert(`Projeto "${proj.nome}" carregado!`);
   }

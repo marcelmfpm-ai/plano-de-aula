@@ -1,9 +1,9 @@
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file, jsonify, send_from_directory
 from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph as DocxParagraph
-from docx.shared import Pt
+from docx.shared import Pt, Inches
 import io
 import os
 import json
@@ -36,19 +36,36 @@ def _fmt(run, bold=False):
 
 def _set_spacing_15(para):
     pPr = para._p.get_or_add_pPr()
-    # espaçamento 1,5
     spacing = pPr.find(qn('w:spacing'))
     if spacing is None:
         spacing = OxmlElement('w:spacing')
         pPr.append(spacing)
     spacing.set(qn('w:line'), '360')
     spacing.set(qn('w:lineRule'), 'auto')
-    # justificado via XML (mais confiável que a propriedade Python)
     jc = pPr.find(qn('w:jc'))
     if jc is None:
         jc = OxmlElement('w:jc')
         pPr.append(jc)
     jc.set(qn('w:val'), 'both')
+
+
+def _centrar_paragrafo(para):
+    pPr = para._p.get_or_add_pPr()
+    jc = pPr.find(qn('w:jc'))
+    if jc is None:
+        jc = OxmlElement('w:jc')
+        pPr.append(jc)
+    jc.set(qn('w:val'), 'center')
+
+
+def _inserir_linha_vazia_antes(para):
+    blank = OxmlElement('w:p')
+    para._element.addprevious(blank)
+
+
+def _inserir_linha_vazia_apos(para):
+    blank = OxmlElement('w:p')
+    para._element.addnext(blank)
 
 
 def inserir_tabela_apos(doc, paragrafo_ref, rows):
@@ -155,6 +172,7 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_PATH = os.path.join(BASE_DIR, 'ESTRUTURA DO PLANO DE AULA.docx')
+IMAGENS_DIR = os.path.join(BASE_DIR, 'IMAGENS')
 
 
 def _remover_imagens_apos_material(doc):
@@ -195,6 +213,19 @@ def substituir_paragrafo(para, substituicoes):
         para.runs[0].text = novo_texto
         for run in para.runs[1:]:
             run.text = ''
+
+
+@app.route('/imagens')
+def listar_imagens():
+    exts = {'.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'}
+    imgs = sorted([f for f in os.listdir(IMAGENS_DIR)
+                   if os.path.splitext(f.lower())[1] in exts])
+    return jsonify(imgs)
+
+
+@app.route('/imagens/<path:filename>')
+def servir_imagem(filename):
+    return send_from_directory(IMAGENS_DIR, filename)
 
 
 @app.route('/')
@@ -282,22 +313,29 @@ def gerar():
     etapa_outros   = data.getlist('etapa_nome_outro')
     etapa_tempos   = data.getlist('etapa_tempo')
     etapa_detalhes = data.getlist('etapa_detalhe')
+    etapa_imgs_raw = data.getlist('etapa_img')
     estrutura_rows    = []
     estrutura_detalhes = []
     acumulado = 0
     for i, nome in enumerate(etapa_nomes):
         nome_final = etapa_outros[i].strip() if nome == '__outro__' and i < len(etapa_outros) else nome
-        tempo = int(etapa_tempos[i] or 0) if i < len(etapa_tempos) else 0
+        try:
+            tempo = int(str(etapa_tempos[i]).split(',')[0].strip() or 0) if i < len(etapa_tempos) else 0
+        except (ValueError, TypeError):
+            tempo = 0
         acumulado += tempo
         detalhe = etapa_detalhes[i].strip() if i < len(etapa_detalhes) else ''
+        img_filename = etapa_imgs_raw[i].strip() if i < len(etapa_imgs_raw) else ''
         if nome_final:
             estrutura_rows.append((nome_final, f'{tempo} min', f'{acumulado} min'))
-            estrutura_detalhes.append((nome_final, detalhe))
+            estrutura_detalhes.append((nome_final, detalhe, img_filename))
 
     verificacao_itens  = [v.strip() for v in data.getlist('verificacao')       if v.strip()]
     ressalva_itens     = [v.strip() for v in data.getlist('ressalva')          if v.strip()]
     estrategia_intro   = data.get('estrategia_intro', '').strip()
     estrategia_bullets = [v.strip() for v in data.getlist('estrategia_bullet') if v.strip()]
+    prep_cenario_nao_ha = data.get('prep_cenario_nao_ha', '') == '1'
+    prep_cenario_itens  = [v.strip() for v in data.getlist('prep_cenario_item') if v.strip()]
 
     for para in doc.paragraphs:
         substituir_paragrafo(para, substituicoes)
@@ -312,9 +350,32 @@ def gerar():
                 enfase_titulo = inserir_linha_apos(ref, 'Ênfase:', 'Normal')
                 inserir_lista_formatada(enfase_titulo, enfase_itens)
         elif '3.1 HUMANO' in texto:
+            total_prof = (int(data.get('prof_apc_qtd', 0) or 0) +
+                          int(data.get('prof_damaz', 0) or 0) +
+                          int(data.get('prof_dciber', 0) or 0) +
+                          int(data.get('prof_epol', 0) or 0))
+            total_mon  = (int(data.get('monitor_apc', 0) or 0) +
+                          int(data.get('monitor_sala', 0) or 0) +
+                          int(data.get('monitor_epol', 0) or 0) +
+                          int(data.get('monitor_damaz', 0) or 0) +
+                          int(data.get('monitor_dciber', 0) or 0))
+            total_aux  = int(data.get('aux_qtd', 0) or 0)
+            partes_rh = []
+            if total_prof > 0: partes_rh.append(f'{total_prof:02d} professores')
+            if total_mon  > 0: partes_rh.append(f'{total_mon:02d} monitores')
+            if total_aux  > 0: partes_rh.append(f'{total_aux:02d} auxiliares')
+            if partes_rh:
+                _fmt(para.add_run(f' ({", ".join(partes_rh)})'))
             inserir_lista_apos(para, humano_itens)
         elif '3.2 MATERIAL' in texto:
             inserir_lista_apos(para, material_itens)
+        elif '3.3' in texto and 'CEN' in texto.upper():
+            if prep_cenario_nao_ha:
+                inserir_lista_apos(para, ['Não há.'])
+            elif prep_cenario_itens:
+                ref = para
+                for i, item in enumerate(prep_cenario_itens):
+                    ref = inserir_linha_apos(ref, f'3.3.{i + 1} {item}', 'Normal')
         elif 'ESTRATÉGIA DE ENSINO' in texto:
             ref = para
             if estrategia_intro:
@@ -324,25 +385,46 @@ def gerar():
             if estrutura_rows:
                 tbl = inserir_tabela_apos(doc, para, estrutura_rows)
                 ultimo = tbl._tbl
-                for idx, (nome_etapa, detalhe) in enumerate(estrutura_detalhes):
+                for idx, (nome_etapa, detalhe, img_filename) in enumerate(estrutura_detalhes):
                     p_blank = OxmlElement('w:p')
                     ultimo.addnext(p_blank)
                     p_tit_xml = OxmlElement('w:p')
                     p_blank.addnext(p_tit_xml)
                     p_tit = DocxParagraph(p_tit_xml, para._parent)
                     _fmt(p_tit.add_run(f'4.{idx + 1} {nome_etapa}'), bold=True)
+                    p_blank_tit = OxmlElement('w:p')
+                    p_tit_xml.addnext(p_blank_tit)
                     p_det_xml = OxmlElement('w:p')
-                    p_tit_xml.addnext(p_det_xml)
+                    p_blank_tit.addnext(p_det_xml)
                     p_det = DocxParagraph(p_det_xml, para._parent)
                     if detalhe:
                         _fmt(p_det.add_run(detalhe))
                     ultimo = p_det_xml
+                    if img_filename:
+                        img_fns = [f.strip() for f in img_filename.split('|') if f.strip()]
+                        ref_xml = p_det_xml
+                        for img_fn in img_fns:
+                            img_path = os.path.join(IMAGENS_DIR, img_fn)
+                            if os.path.isfile(img_path):
+                                p_img_xml = OxmlElement('w:p')
+                                ref_xml.addnext(p_img_xml)
+                                p_img = DocxParagraph(p_img_xml, para._parent)
+                                try:
+                                    p_img.style = 'Normal'
+                                except Exception:
+                                    pass
+                                p_img.add_run().add_picture(img_path, width=Inches(5.5))
+                                _set_spacing_15(p_img)
+                                ref_xml = p_img_xml
+                        ultimo = ref_xml
         elif 'Ressalvas Did' in texto:
             inserir_lista_apos(para, ressalva_itens)
         elif 'VERIFICAÇÃO DE APRENDIZAGEM' in texto:
             ref = para
             for item in verificacao_itens:
                 ref = inserir_linha_apos(ref, item, 'Normal')
+        elif 'AVALIA' in texto.upper() and 'AULA' in texto.upper():
+            para.paragraph_format.page_break_before = True
 
     # Aplica espaçamento 1,5 e justificado em todos os parágrafos do documento
     for para in doc.paragraphs:
@@ -352,6 +434,37 @@ def gerar():
             for cell in row.cells:
                 for para in cell.paragraphs:
                     _set_spacing_15(para)
+
+    # Centraliza parágrafos de título do documento
+    for para in doc.paragraphs:
+        t = para.text.upper()
+        if 'CFP PARA CARGO' in t or t.strip() == 'PLANO DE AULA':
+            _centrar_paragrafo(para)
+
+    # Adiciona linha vazia antes e após cada cabeçalho de seção
+    SECAO_CHAVES = [
+        'OBJETIVOS DE APRENDIZAGEM',
+        '3.1 HUMANO',
+        '3.2 MATERIAL',
+        'ESTRATÉGIA DE ENSINO',
+        'ESTRUTURA GERAL DA AULA',
+        'VERIFICAÇÃO DE APRENDIZAGEM',
+    ]
+
+    def _e_cabecalho_secao(t):
+        tu = t.upper()
+        if any(k in tu for k in SECAO_CHAVES):
+            return True
+        if '3.3' in t and 'CEN' in tu:
+            return True
+        if 'Ressalvas Did' in t:
+            return True
+        return False
+
+    cabecalhos = [p for p in doc.paragraphs if _e_cabecalho_secao(p.text)]
+    for para in cabecalhos:
+        _inserir_linha_vazia_antes(para)
+        _inserir_linha_vazia_apos(para)
 
     buf = io.BytesIO()
     doc.save(buf)
