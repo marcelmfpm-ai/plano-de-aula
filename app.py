@@ -429,6 +429,5 @@ def deletar_projeto(doc_id):
 
 
 if __name__ == '__main__':
-    import webbrowser, threading
-    threading.Timer(1.2, lambda: webbrowser.open('http://localhost:5000')).start()
-    app.run(debug=False, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
