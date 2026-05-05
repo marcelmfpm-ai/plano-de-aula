@@ -435,11 +435,9 @@ def gerar():
                 for para in cell.paragraphs:
                     _set_spacing_15(para)
 
-    # Centraliza parágrafos de título do documento
-    for para in doc.paragraphs:
-        t = para.text.upper()
-        if 'CFP PARA CARGO' in t or t.strip() == 'PLANO DE AULA':
-            _centrar_paragrafo(para)
+    # Centraliza as 5 primeiras linhas da primeira página
+    for para in doc.paragraphs[:5]:
+        _centrar_paragrafo(para)
 
     # Adiciona linha vazia antes e após cada cabeçalho de seção
     SECAO_CHAVES = [

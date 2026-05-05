@@ -511,10 +511,10 @@
         <div class="mb-3">
           <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="form-label mb-0">Parágrafo introdutório</span>
-            <span class="badge-em-breve" style="font-size:.72rem;">gerado automaticamente pela Identificação</span>
+            <span class="badge-em-breve" style="font-size:.72rem;">gerado pela Identificação — editável</span>
           </div>
           <textarea class="form-control" name="estrategia_intro" id="estrategia_intro" rows="6"
-                    style="background:#f8f9fa;color:#444;font-size:.88rem;" readonly></textarea>
+                    style="font-size:.88rem;"></textarea>
         </div>
 
         <!-- Bullets de estratégia -->
@@ -2762,6 +2762,27 @@
       else if (Array.isArray(dados[k])) dados[k].push(v);
       else dados[k] = [dados[k], v];
     }
+    // Coletar apenas objetivos e ênfases preenchidos (sem strings vazias)
+    dados.obj_verbo = Array.from(
+      document.querySelectorAll('#lista-objetivos [name=obj_verbo]')
+    ).map(el => el.value).filter(v => v.trim());
+    dados.enfase_noun = Array.from(
+      document.querySelectorAll('#lista-enfase [name=enfase_noun]')
+    ).map(el => el.value).filter(v => v.trim());
+    // Salvar descricao_aula corretamente (incluindo valor personalizado "Outro")
+    const selDA = document.getElementById('descricao_aula_select');
+    const inpDA = document.getElementById('descricao_aula_outro');
+    if (selDA && selDA.name === '') {
+      dados.descricao_aula = inpDA ? inpDA.value : '';
+      dados._descricao_aula_outro = '1';
+    } else if (selDA) {
+      dados.descricao_aula = selDA.value;
+      dados._descricao_aula_outro = '0';
+    }
+    // Salvar estado dos cliques verdes por índice de seção
+    dados._secoes_done = Array.from(document.querySelectorAll('.secao')).map(
+      s => (s.querySelector('.secao-check') && s.querySelector('.secao-check').classList.contains('done')) ? '1' : '0'
+    );
     return dados;
   }
 
@@ -2837,11 +2858,11 @@
     const dados = proj.dados || {};
     const form = document.querySelector('form');
 
-    // Restaurar objetivos de aprendizagem
+    // Restaurar objetivos de aprendizagem (filtra vazios de projetos antigos)
     _objsSelecionados.clear();
     document.getElementById('lista-objetivos').innerHTML = '';
     const frasesCarregadas = dados.obj_verbo
-      ? (Array.isArray(dados.obj_verbo) ? dados.obj_verbo : [dados.obj_verbo])
+      ? (Array.isArray(dados.obj_verbo) ? dados.obj_verbo : [dados.obj_verbo]).filter(f => f && f.trim())
       : [];
     const totalLinhas = Math.max(5, frasesCarregadas.length);
     for (let i = 0; i < totalLinhas; i++) adicionarLinhaObjetivo();
@@ -2853,11 +2874,11 @@
       _objsSelecionados.add(f);
     });
 
-    // Restaurar ênfases
+    // Restaurar ênfases (filtra vazios de projetos antigos)
     _enfasesSelecionadas.clear();
     document.getElementById('lista-enfase').innerHTML = '';
     const enfasesCarregadas = dados.enfase_noun
-      ? (Array.isArray(dados.enfase_noun) ? dados.enfase_noun : [dados.enfase_noun])
+      ? (Array.isArray(dados.enfase_noun) ? dados.enfase_noun : [dados.enfase_noun]).filter(f => f && f.trim())
       : [];
     const totalLinhasEnfase = Math.max(3, enfasesCarregadas.length);
     for (let i = 0; i < totalLinhasEnfase; i++) adicionarLinhaEnfase();
@@ -2881,7 +2902,8 @@
 
     for (const [k, v] of Object.entries(dados)) {
       if (k === 'obj_verbo' || k === 'obj_verbo_outro' || k === 'obj_complemento' ||
-          k === 'enfase_noun' || k === 'enfase_comp') continue;
+          k === 'enfase_noun' || k === 'enfase_comp' || k === 'descricao_aula' ||
+          k === '_descricao_aula_outro' || k === '_secoes_done') continue;
       const els = form.querySelectorAll(`[name="${k}"]`);
       if (!els.length) continue;
       const vals = Array.isArray(v) ? v : [v];
@@ -2892,6 +2914,42 @@
         els.forEach((el, i) => { if (vals[i] !== undefined) el.value = vals[i]; });
       }
     }
+
+    // Restaurar descricao_aula (incluindo valor personalizado "Outro")
+    const selectDA = document.getElementById('descricao_aula_select');
+    const inputDA = document.getElementById('descricao_aula_outro');
+    const valDA = dados.descricao_aula || '';
+    const isOutroDA = dados._descricao_aula_outro === '1';
+    if (isOutroDA && valDA) {
+      selectDA.value = '__outro__';
+      selectDA.name = '';
+      inputDA.name = 'descricao_aula';
+      inputDA.value = valDA;
+      inputDA.style.display = '';
+    } else if (valDA) {
+      selectDA.value = valDA;
+      selectDA.name = 'descricao_aula';
+      inputDA.name = '';
+      inputDA.style.display = 'none';
+      inputDA.value = '';
+    }
+
+    // Restaurar estado dos cliques verdes (por índice de seção)
+    if (dados._secoes_done) {
+      const secoes = Array.from(document.querySelectorAll('.secao'));
+      const done = Array.isArray(dados._secoes_done) ? dados._secoes_done : [dados._secoes_done];
+      secoes.forEach((secao, i) => {
+        const btn = secao.querySelector('.secao-check');
+        if (!btn) return;
+        if (done[i] === '1') {
+          btn.classList.add('done');
+          secao.classList.add('collapsed');
+        } else {
+          btn.classList.remove('done');
+        }
+      });
+    }
+
     sincronizarDetalhes();
     toggleSidebar();
     alert(`Projeto "${proj.nome}" carregado!`);
