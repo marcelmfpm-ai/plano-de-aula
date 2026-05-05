@@ -54,6 +54,34 @@
     .secao.collapsed .chevron {
       transform: rotate(-90deg);
     }
+    .secao-header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .secao-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.7);
+      background: transparent;
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .secao-check.done {
+      background: #22c55e;
+      border-color: #22c55e;
+      color: #fff;
+    }
     .secao-body {
       transition: none;
     }
@@ -305,7 +333,7 @@
 
     <!-- ── IDENTIFICAÇÃO ────────────────────────────────────────── -->
     <div class="secao collapsed">
-      <div class="secao-header" onclick="toggleSecao(this)">Identificação <span class="chevron">&#9660;</span></div>
+      <div class="secao-header" onclick="toggleSecao(this)">Identificação <span class="secao-header-right"><button type="button" class="secao-check" onclick="toggleSecaoCheck(this,event)">&#10003;</button><span class="chevron">&#9660;</span></span></div>
       <div class="secao-body">
         <div class="row g-3">
 
@@ -434,7 +462,7 @@
     </div>
 
     <div class="secao collapsed">
-      <div class="secao-header" onclick="toggleSecao(this)">1. Objetivos de Aprendizagem<span class="chevron">&#9660;</span></div>
+      <div class="secao-header" onclick="toggleSecao(this)">1. Objetivos de Aprendizagem<span class="secao-header-right"><button type="button" class="secao-check" onclick="toggleSecaoCheck(this,event)">&#10003;</button><span class="chevron">&#9660;</span></span></div>
       <div class="secao-body">
 
         <div class="intro-fixa mb-3">
@@ -476,7 +504,7 @@
     </div>
 
     <div class="secao collapsed">
-      <div class="secao-header" onclick="toggleSecao(this)">2. Estratégia de Ensino<span class="chevron">&#9660;</span></div>
+      <div class="secao-header" onclick="toggleSecao(this)">2. Estratégia de Ensino<span class="secao-header-right"><button type="button" class="secao-check" onclick="toggleSecaoCheck(this,event)">&#10003;</button><span class="chevron">&#9660;</span></span></div>
       <div class="secao-body">
 
         <!-- Parágrafo introdutório com campos dinâmicos -->
@@ -522,7 +550,7 @@
     </div>
 
     <div class="secao collapsed">
-      <div class="secao-header" onclick="toggleSecao(this)">3. Recursos Necessários<span class="chevron">&#9660;</span></div>
+      <div class="secao-header" onclick="toggleSecao(this)">3. Recursos Necessários<span class="secao-header-right"><button type="button" class="secao-check" onclick="toggleSecaoCheck(this,event)">&#10003;</button><span class="chevron">&#9660;</span></span></div>
       <div class="secao-body">
 
         <!-- 3.1 Humano -->
@@ -702,7 +730,7 @@
     </div>
 
     <div class="secao collapsed">
-      <div class="secao-header" onclick="toggleSecao(this)">4. Estrutura Geral da Aula<span class="chevron">&#9660;</span></div>
+      <div class="secao-header" onclick="toggleSecao(this)">4. Estrutura Geral da Aula<span class="secao-header-right"><button type="button" class="secao-check" onclick="toggleSecaoCheck(this,event)">&#10003;</button><span class="chevron">&#9660;</span></span></div>
       <div class="secao-body">
 
         <table class="table table-bordered table-sm tabela-estrutura" id="tabela-estrutura">
@@ -735,7 +763,7 @@
     </div>
 
     <div class="secao collapsed">
-      <div class="secao-header" onclick="toggleSecao(this)">5. Ressalvas Didáticas Importantes<span class="chevron">&#9660;</span></div>
+      <div class="secao-header" onclick="toggleSecao(this)">5. Ressalvas Didáticas Importantes<span class="secao-header-right"><button type="button" class="secao-check" onclick="toggleSecaoCheck(this,event)">&#10003;</button><span class="chevron">&#9660;</span></span></div>
       <div class="secao-body">
         <div id="lista-ressalvas">
           {% set ressalvas_padrao = [
@@ -760,7 +788,7 @@
     </div>
 
     <div class="secao collapsed">
-      <div class="secao-header" onclick="toggleSecao(this)">6. Verificação de Aprendizagem<span class="chevron">&#9660;</span></div>
+      <div class="secao-header" onclick="toggleSecao(this)">6. Verificação de Aprendizagem<span class="secao-header-right"><button type="button" class="secao-check" onclick="toggleSecaoCheck(this,event)">&#10003;</button><span class="chevron">&#9660;</span></span></div>
       <div class="secao-body">
         <div id="lista-verificacao">
           <div class="verif-row mb-2">
@@ -784,6 +812,9 @@
       </button>
       <button type="button" class="btn btn-success px-4" style="font-size:1rem;font-weight:600;border-radius:8px;" onclick="salvarProjeto()">
         💾 Salvar
+      </button>
+      <button type="button" class="btn btn-outline-success px-3" style="font-size:1rem;font-weight:600;border-radius:8px;" onclick="salvarComo()">
+        💾 Salvar Como
       </button>
     </div>
 
@@ -2364,22 +2395,6 @@
       }
       div.appendChild(imgSection);
 
-      var evolucaoDiv = document.createElement('div');
-      evolucaoDiv.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:10px;padding:6px 10px;border:1px solid #d0d5dd;border-radius:6px;background:#f8f9fa;';
-      var evolucaoLabel = document.createElement('span');
-      evolucaoLabel.textContent = 'Evolução';
-      evolucaoLabel.style.cssText = 'font-size:0.82rem;font-weight:600;color:#444;';
-      var btnConcluir = document.createElement('button');
-      btnConcluir.type = 'button';
-      btnConcluir.className = 'etapa-btn-concluir';
-      btnConcluir.style.cssText = 'width:26px;height:26px;border-radius:50%;font-size:1rem;font-weight:bold;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;justify-content:center;transition:all 0.15s;' +
-        (concluida ? 'border:2px solid #22c55e;background:#22c55e;color:#fff;' : 'border:2px solid #22c55e;background:transparent;color:#22c55e;');
-      btnConcluir.innerHTML = '&#10003;';
-      btnConcluir.title = concluida ? 'Concluído — clique para desmarcar' : 'Marcar como concluído';
-      (function(rid) { btnConcluir.onclick = function() { marcarEtapaConcluida(rid); }; })(rowId);
-      evolucaoDiv.appendChild(evolucaoLabel);
-      evolucaoDiv.appendChild(btnConcluir);
-      div.appendChild(evolucaoDiv);
 
       container.appendChild(div);
     }
@@ -2715,6 +2730,15 @@
     header.closest('.secao').classList.toggle('collapsed');
   }
 
+  function toggleSecaoCheck(btn, event) {
+    event.stopPropagation();
+    const secao = btn.closest('.secao');
+    btn.classList.toggle('done');
+    if (btn.classList.contains('done')) {
+      secao.classList.add('collapsed');
+    }
+  }
+
   // ── SIDEBAR ──────────────────────────────────────────────────────
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar-projetos');
@@ -2727,6 +2751,7 @@
 
   // ── SALVAR / CARREGAR PROJETOS ────────────────────────────────────
   let _projetoAtualId = null;
+  let _salvarComoMode = false;
 
   function coletarDadosFormulario() {
     const form = document.querySelector('form');
@@ -2741,9 +2766,21 @@
   }
 
   function salvarProjeto() {
-    const modal = new bootstrap.Modal(document.getElementById('modalSalvar'));
+    _salvarComoMode = false;
+    document.querySelector('#modalSalvar .modal-title').textContent = 'Salvar Projeto';
     const savedUsuario = localStorage.getItem('usuario_salvo') || '';
     document.getElementById('inputUsuario').value = savedUsuario;
+    const modal = new bootstrap.Modal(document.getElementById('modalSalvar'));
+    modal.show();
+  }
+
+  function salvarComo() {
+    _salvarComoMode = true;
+    document.querySelector('#modalSalvar .modal-title').textContent = 'Salvar Como...';
+    const savedUsuario = localStorage.getItem('usuario_salvo') || '';
+    document.getElementById('inputNomeProjeto').value = '';
+    document.getElementById('inputUsuario').value = savedUsuario;
+    const modal = new bootstrap.Modal(document.getElementById('modalSalvar'));
     modal.show();
   }
 
@@ -2757,11 +2794,12 @@
 
     let url = '/salvar';
     let method = 'POST';
-    if (_projetoAtualId) { url = `/projeto/${_projetoAtualId}`; method = 'PUT'; }
+    if (_projetoAtualId && !_salvarComoMode) { url = `/projeto/${_projetoAtualId}`; method = 'PUT'; }
 
     const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const json = await res.json();
-    if (!_projetoAtualId && json.id) _projetoAtualId = json.id;
+    if (method === 'POST' && json.id) _projetoAtualId = json.id;
+    _salvarComoMode = false;
 
     bootstrap.Modal.getInstance(document.getElementById('modalSalvar')).hide();
     alert(`Projeto "${nome}" salvo com sucesso!`);

@@ -51,11 +51,11 @@ def _set_spacing_15(para):
 
 def _centrar_paragrafo(para):
     pPr = para._p.get_or_add_pPr()
-    jc = pPr.find(qn('w:jc'))
-    if jc is None:
-        jc = OxmlElement('w:jc')
-        pPr.append(jc)
+    for jc_el in pPr.findall(qn('w:jc')):
+        pPr.remove(jc_el)
+    jc = OxmlElement('w:jc')
     jc.set(qn('w:val'), 'center')
+    pPr.append(jc)
 
 
 def _inserir_linha_vazia_antes(para):
