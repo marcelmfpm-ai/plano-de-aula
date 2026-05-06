@@ -2524,6 +2524,24 @@
     sincronizarDetalhes();
   }
 
+  // Sincroniza inputs visíveis com hidden antes de submeter o form
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('form').addEventListener('submit', function() {
+      document.querySelectorAll('#lista-objetivos .obj-linha').forEach(function(row) {
+        var visible = row.querySelector('.busca-obj-input');
+        var hidden  = row.querySelector('[name=obj_verbo]');
+        if (visible && hidden && visible.value.trim() && !hidden.value.trim())
+          hidden.value = visible.value.trim();
+      });
+      document.querySelectorAll('#lista-enfase .obj-linha').forEach(function(row) {
+        var visible = row.querySelector('.busca-enfase-input');
+        var hidden  = row.querySelector('[name=enfase_noun]');
+        if (visible && hidden && visible.value.trim() && !hidden.value.trim())
+          hidden.value = visible.value.trim();
+      });
+    });
+  });
+
   // Inicia com uma linha vazia
   document.addEventListener('DOMContentLoaded', () => {
     adicionarEtapa();
@@ -2762,13 +2780,21 @@
       else if (Array.isArray(dados[k])) dados[k].push(v);
       else dados[k] = [dados[k], v];
     }
-    // Coletar apenas objetivos e ênfases preenchidos (sem strings vazias)
+    // Coletar objetivos e ênfases — fallback para o input visível se o hidden estiver vazio
     dados.obj_verbo = Array.from(
-      document.querySelectorAll('#lista-objetivos [name=obj_verbo]')
-    ).map(el => el.value).filter(v => v.trim());
+      document.querySelectorAll('#lista-objetivos .obj-linha')
+    ).map(row => {
+      const h = row.querySelector('[name=obj_verbo]');
+      const v = row.querySelector('.busca-obj-input');
+      return (h && h.value.trim()) || (v && v.value.trim()) || '';
+    }).filter(v => v);
     dados.enfase_noun = Array.from(
-      document.querySelectorAll('#lista-enfase [name=enfase_noun]')
-    ).map(el => el.value).filter(v => v.trim());
+      document.querySelectorAll('#lista-enfase .obj-linha')
+    ).map(row => {
+      const h = row.querySelector('[name=enfase_noun]');
+      const v = row.querySelector('.busca-enfase-input');
+      return (h && h.value.trim()) || (v && v.value.trim()) || '';
+    }).filter(v => v);
     // Salvar descricao_aula corretamente (incluindo valor personalizado "Outro")
     const selDA = document.getElementById('descricao_aula_select');
     const inpDA = document.getElementById('descricao_aula_outro');
