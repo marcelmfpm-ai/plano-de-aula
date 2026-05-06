@@ -177,6 +177,13 @@ TEMPLATE_PATH = os.path.join(BASE_DIR, 'ESTRUTURA DO PLANO DE AULA.docx')
 IMAGENS_DIR = os.path.join(BASE_DIR, 'IMAGENS')
 
 
+def _remover_tabela_descricao(doc):
+    for tbl in doc.tables:
+        if tbl.rows and tbl.rows[0].cells[0].text.strip().upper().startswith('DESCRI'):
+            tbl._tbl.getparent().remove(tbl._tbl)
+            return
+
+
 def _remover_imagens_apos_material(doc):
     parags = list(doc.paragraphs)
     inicio = None
@@ -241,6 +248,7 @@ def index():
 def gerar():
     data = request.form
     doc = Document(TEMPLATE_PATH)
+    _remover_tabela_descricao(doc)
     _remover_imagens_apos_material(doc)
 
     substituicoes = {
