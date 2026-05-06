@@ -13,12 +13,14 @@ from datetime import datetime
 
 BASE_DIR_EARLY = os.path.dirname(os.path.abspath(__file__))
 
-_firebase_creds_env = os.environ.get('FIREBASE_CREDENTIALS')
-if _firebase_creds_env:
-    _cred = credentials.Certificate(json.loads(_firebase_creds_env))
-else:
-    _cred_path = os.path.join(BASE_DIR_EARLY, 'plano-de-aula-4a383-firebase-adminsdk-fbsvc-bd042c3e0f.json')
-    _cred = credentials.Certificate(_cred_path)
+firebase_json = os.getenv("FIREBASE_CREDENTIALS")
+
+if not firebase_json:
+    raise ValueError("FIREBASE_CREDENTIALS não encontrada!")
+
+cred_dict = json.loads(firebase_json)
+
+_cred = credentials.Certificate(cred_dict)
 
 firebase_admin.initialize_app(_cred)
 db = firestore.client()
