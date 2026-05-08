@@ -612,7 +612,8 @@ def _pptx_fill_list(shape, fragment, lines):
 
 
 def _pptx_process_slide(slide, campos, imagens, modulo, modulo_descricao,
-                         unidade, atividade, all_objs, all_enfases, all_etapas):
+                         unidade, atividade, all_objs, all_enfases, all_etapas,
+                         fase_info=None):
     sel = {}
     for campo in campos:
         tc = campo.get('tipo_campo', '')
@@ -650,8 +651,15 @@ def _pptx_process_slide(slide, campos, imagens, modulo, modulo_descricao,
                         r.text = ''
         elif 'PUXAR OS OBJETIVOS' in txt:
             _pptx_fill_list(shape, 'PUXAR OS OBJETIVOS', objs)
+        elif 'PUXAR NOME FASE' in txt:
+            if fase_info:
+                _pptx_replace_text(shape, {'PUXAR NOME FASE': fase_info.get('nome', '')})
         elif 'PUXAR ETAPAS' in txt:
-            _pptx_fill_list(shape, 'PUXAR ETAPAS', etapas)
+            if fase_info:
+                desc = fase_info.get('detalhe') or fase_info.get('nome', '')
+                _pptx_fill_list(shape, 'PUXAR ETAPAS', [desc])
+            else:
+                _pptx_fill_list(shape, 'PUXAR ETAPAS', etapas)
         elif 'PUXAR A ENFASE' in txt:
             _pptx_fill_list(shape, 'PUXAR A ENFASE', enfases)
         elif 'PUXAR' in txt:
@@ -703,13 +711,17 @@ def gerar_slides():
     all_enfases = [e for e in form.getlist('enfase_noun') if e.strip()]
     etapa_nomes = form.getlist('etapa_nome')
     etapa_outros = form.getlist('etapa_nome_outro')
+    etapa_detalhes = form.getlist('etapa_detalhe')
     all_etapas = []
+    all_etapas_info = []
     for i, nome in enumerate(etapa_nomes):
         n = nome.strip()
-        if n == 'outro' and i < len(etapa_outros):
+        if n == '__outro__' and i < len(etapa_outros):
             n = etapa_outros[i].strip()
-        if n and n != 'outro':
+        if n and n != '__outro__':
+            detalhe = etapa_detalhes[i].strip() if i < len(etapa_detalhes) else ''
             all_etapas.append(n)
+            all_etapas_info.append({'nome': n, 'detalhe': detalhe})
 
     template_path = os.path.join(BASE_DIR, 'MODELO SLIDE.pptx')
     prs_ref = PPTXPresentation(template_path)
@@ -729,10 +741,21 @@ def gerar_slides():
         prs.slide_layouts[-1]
     )
 
-    for i, cfg in enumerate(slide_config):
+    expanded_config = []
+    for cfg in slide_config:
+        if cfg.get('tipo') == 'FASES' and all_etapas_info:
+            for etapa in all_etapas_info:
+                new_cfg = dict(cfg)
+                new_cfg['_fase_info'] = etapa
+                expanded_config.append(new_cfg)
+        else:
+            expanded_config.append(cfg)
+
+    for i, cfg in enumerate(expanded_config):
         tipo = cfg.get('tipo', 'MISSÃO')
         campos = cfg.get('campos', [])
         imagens = cfg.get('imagens', [])
+        fase_info = cfg.get('_fase_info')
 
         ref_list = TIPO_REF.get(tipo, TIPO_REF['MISSÃO'])
         cnt = tipo_counts.get(tipo, 0)
@@ -746,7 +769,8 @@ def gerar_slides():
 
         _pptx_clone_shapes(target, ref_slide)
         _pptx_process_slide(target, campos, imagens, modulo, modulo_descricao,
-                            unidade, atividade, all_objs, all_enfases, all_etapas)
+                            unidade, atividade, all_objs, all_enfases, all_etapas,
+                            fase_info=fase_info)
 
     buf = io.BytesIO()
     prs.save(buf)

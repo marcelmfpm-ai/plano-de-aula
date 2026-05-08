@@ -319,6 +319,18 @@
     /* ── SLIDE BUILDER ── */
     .slide-card { background:#f8fafc; border:1px solid #d0d5dd; border-radius:10px; margin-bottom:14px; overflow:hidden; }
     .slide-card-header { background:#1a3a5c; color:white; padding:10px 16px; display:flex; align-items:center; gap:10px; }
+    /* ── SLIDE PREVIEW ── */
+    .slide-preview-wrapper { padding:12px 16px 0; }
+    .slide-preview { width:100%; aspect-ratio:16/9; background:#0d2137; border-radius:6px; overflow:hidden; display:flex; flex-direction:column; position:relative; font-size:clamp(7px,1.1vw,11px); }
+    .sp-header { background:#1a3a5c; padding:0.35em 0.8em; display:flex; justify-content:space-between; align-items:center; color:rgba(255,255,255,0.65); font-size:0.75em; border-bottom:1px solid rgba(255,255,255,0.08); flex-shrink:0; }
+    .sp-header strong { color:rgba(255,255,255,0.9); }
+    .sp-body { flex:1; padding:0.6em 1em; display:flex; flex-direction:column; justify-content:center; overflow:hidden; }
+    .sp-tipo-label { color:#7eb8f7; font-size:0.7em; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.3em; }
+    .sp-items { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0.15em; }
+    .sp-items li { color:rgba(255,255,255,0.82); font-size:0.85em; line-height:1.3; padding-left:0.9em; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sp-items li::before { content:'●'; position:absolute; left:0; color:#5b9bd5; font-size:0.6em; top:0.25em; }
+    .sp-empty { color:rgba(255,255,255,0.25); font-size:0.8em; font-style:italic; }
+    .sp-img-badge { position:absolute; bottom:0.4em; right:0.6em; background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.7); font-size:0.7em; padding:0.15em 0.5em; border-radius:8px; }
     .slide-num { background:rgba(255,255,255,0.2); padding:2px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; }
     .slide-tipo { font-weight:700; font-size:0.95rem; flex:1; }
     .btn-remover-slide { background:none; border:none; color:rgba(255,255,255,0.6); font-size:1.2rem; cursor:pointer; padding:0 4px; }
@@ -827,8 +839,18 @@
       </div>
     </div>
 
-    <!-- ── BOTÕES GERAR / SALVAR ─────────────────────────────────── -->
+    <!-- ── BOTÕES INSTRUÇÕES ─────────────────────────────────── -->
     <div class="d-flex gap-2 mt-4 flex-wrap">
+      <button type="button" class="btn btn-outline-secondary btn-sm" style="border-radius:20px;font-size:0.82rem;font-weight:600;padding:4px 14px;" data-bs-toggle="modal" data-bs-target="#modalInstrucaoPlano">
+        ℹ️ Instrução — Plano de Aula
+      </button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" style="border-radius:20px;font-size:0.82rem;font-weight:600;padding:4px 14px;" data-bs-toggle="modal" data-bs-target="#modalInstrucaoSlides">
+        ℹ️ Instrução — Slides
+      </button>
+    </div>
+
+    <!-- ── BOTÕES GERAR / SALVAR ─────────────────────────────────── -->
+    <div class="d-flex gap-2 mt-2 flex-wrap">
       <button type="submit" class="btn-gerar flex-grow-1">
         ⬇ Gerar Plano de Aula (.docx)
       </button>
@@ -859,6 +881,78 @@
         <button type="button" onclick="gerarSlides()" class="btn-gerar" style="min-width:260px;">
           ⬇ Gerar Slides (.pptx)
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL INSTRUÇÃO PLANO DE AULA ─────────────────────────── -->
+  <div class="modal fade" id="modalInstrucaoPlano" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#1a3a5c;">
+          <h5 class="modal-title" style="color:#D4AF37;font-weight:700;">ℹ️ Instrução — Gerador de Plano de Aula (.docx)</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="font-size:0.92rem;line-height:1.7;">
+          <p><strong>O que faz:</strong> Preenche automaticamente o modelo institucional de plano de aula em Word a partir dos dados inseridos no formulário.</p>
+          <hr>
+          <h6 class="fw-bold mb-3">Passo a passo</h6>
+          <ol class="ps-3" style="display:flex;flex-direction:column;gap:10px;">
+            <li><strong>Identificação</strong> — Preencha as informações básicas: cargo, módulo, unidade, quantidade de aulas, local, divisão e grupo da turma. A carga horária e a descrição do módulo são calculadas automaticamente.</li>
+            <li><strong>Objetivos de Aprendizagem</strong> — Pesquise e selecione os objetivos na lista pré-cadastrada. Se necessário, cadastre novos. Faça o mesmo com as ênfases.</li>
+            <li><strong>Estratégia de Ensino</strong> — O parágrafo introdutório é gerado automaticamente com base na identificação (editável). Revise e ajuste as diretrizes metodológicas padrão.</li>
+            <li>
+              <strong>Recursos Necessários</strong>
+              <ul class="mt-1" style="display:flex;flex-direction:column;gap:4px;">
+                <li><strong>Recursos Humanos:</strong> informe a quantidade de professores (com subtipo), monitores e auxiliares.</li>
+                <li><strong>Recursos Materiais:</strong> marque e preencha as quantidades nos 8 grupos de materiais.</li>
+                <li><strong>Preparação do Cenário:</strong> descreva cada item ou marque "Não há".</li>
+              </ul>
+            </li>
+            <li><strong>Estrutura Geral da Aula</strong> — Adicione as etapas (ex: Apresentação, Briefing, Execução, Debriefing) e informe o tempo de cada uma. O tempo acumulado é calculado automaticamente. Para cada etapa inserida será adicionado um detalhamento automático já utilizado em outros projetos (o texto é editável e pode ser ajustado ou totalmente deletado). Se quiser, adicione uma ou mais imagens pelo ícone correspondente.</li>
+            <li><strong>Ressalvas Didáticas e Verificação de Aprendizagem</strong> — Revise os itens padrão e adicione/remova conforme necessário.</li>
+            <li><strong>Gerar</strong> — Clique em <em>"Gerar Plano de Aula (.docx)"</em>. O arquivo <code>Plano_Aula_M{módulo}_U{unidade}.docx</code> será baixado automaticamente com todos os dados inseridos já formatados no modelo.</li>
+          </ol>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL INSTRUÇÃO SLIDES ──────────────────────────────────── -->
+  <div class="modal fade" id="modalInstrucaoSlides" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#1a3a5c;">
+          <h5 class="modal-title" style="color:#D4AF37;font-weight:700;">ℹ️ Instrução — Gerador de Slides (.pptx)</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="font-size:0.92rem;line-height:1.7;">
+          <p><strong>O que faz:</strong> Cria uma apresentação PowerPoint automaticamente usando os dados do formulário preenchido, seguindo o modelo visual institucional.</p>
+          <div class="alert alert-warning py-2 px-3" style="font-size:0.88rem;">
+            <strong>Pré-requisito:</strong> O formulário de plano de aula deve estar preenchido, pois os slides puxam os dados de lá (objetivos, etapas, ênfases, módulo, etc.).
+          </div>
+          <hr>
+          <h6 class="fw-bold mb-3">Passo a passo</h6>
+          <ol class="ps-3" style="display:flex;flex-direction:column;gap:10px;">
+            <li><strong>Abrir o configurador</strong> — Clique em <em>"Criar Slides"</em>. A seção de configuração de slides será exibida com 7 slides padrão já carregados.</li>
+            <li>
+              <strong>Configurar cada slide</strong> — Para cada slide, defina:
+              <ul class="mt-1" style="display:flex;flex-direction:column;gap:4px;">
+                <li><strong>Tipo:</strong> MISSÃO, VALORES, OBJETIVOS, FASES, DEBRIEFING ou ÊNFASE</li>
+                <li><strong>Campos:</strong> marque quais listas o slide deve exibir — Objetivos da Aula, Etapas da Aula ou Ênfases</li>
+                <li><strong>Imagens:</strong> clique no botão de imagens para selecionar fotos que serão inseridas no slide e poderão ser ajustadas pelo usuário após a criação do arquivo.</li>
+              </ul>
+            </li>
+            <li><strong>Adicionar ou remover slides</strong> — Use os botões de cada slide para removê-lo, ou clique em <em>"＋ Slide"</em> para incluir mais além dos 7 padrão.</li>
+            <li><strong>Gerar</strong> — Clique em <em>"Gerar Slides (.pptx)"</em>. O arquivo <code>Slides_M{módulo}_U{unidade}.pptx</code> será baixado com os slides montados automaticamente, já com os textos do formulário substituídos nos lugares certos do modelo.</li>
+          </ol>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3117,6 +3211,53 @@
     if (etapas.length)    _slidesCampos.etapas    = { label: 'Etapas da Aula',            tipo_campo: 'etapas',    itens: etapas    };
   }
 
+  function _buildSlidePreview(slide) {
+    const modulo  = document.querySelector('select[name="modulo"]')?.value  || '?';
+    const unidade = document.querySelector('select[name="unidade"]')?.value || '?';
+    const atividade = document.querySelector('input[name="atividade_hidden"]')?.value
+                   || document.querySelector('select[name="descricao_aula"]')?.value
+                   || '';
+
+    let items = [];
+    if (slide.campos.length > 0) {
+      slide.campos.forEach(c => items.push(...c.valores));
+    } else {
+      const fallback = {
+        'OBJETIVOS': 'objetivos',
+        'FASES':     'etapas',
+        'ÊNFASE':    'enfases',
+        'DEBRIEFING':'etapas',
+      };
+      const key = fallback[slide.tipo];
+      if (key && _slidesCampos[key]) items = _slidesCampos[key].itens;
+    }
+
+    const MAX = 6;
+    const listHtml = items.length
+      ? `<ul class="sp-items">${items.slice(0, MAX).map(i => `<li>${_esc(i)}</li>`).join('')}${items.length > MAX ? '<li style="color:rgba(255,255,255,0.3)">…</li>' : ''}</ul>`
+      : `<span class="sp-empty">Conteúdo automático do modelo</span>`;
+
+    const imgBadge = slide.imagens.length
+      ? `<span class="sp-img-badge">🖼 ${slide.imagens.length}</span>` : '';
+
+    const atv = atividade ? ` · ${_esc(atividade)}` : '';
+
+    return `
+      <div class="slide-preview-wrapper">
+        <div class="slide-preview">
+          <div class="sp-header">
+            <strong>Módulo ${_esc(modulo)} · Unidade ${_esc(unidade)}</strong>
+            <span>${_esc(slide.tipo)}${atv}</span>
+          </div>
+          <div class="sp-body">
+            <div class="sp-tipo-label">${_esc(slide.tipo)}</div>
+            ${listHtml}
+          </div>
+          ${imgBadge}
+        </div>
+      </div>`;
+  }
+
   function _renderSlides() {
     const container = document.getElementById('slides-container');
     container.innerHTML = '';
@@ -3137,6 +3278,7 @@
           <span class="slide-num">Slide ${idx + 1}</span>
           <span class="slide-tipo">${slide.tipo}</span>${remBtn}
         </div>
+        ${_buildSlidePreview(slide)}
         <div class="slide-content-area">
           <div class="slide-tags-area">${camposTags}${imgTags}</div>
           <div class="slide-card-actions">
