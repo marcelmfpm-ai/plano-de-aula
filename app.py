@@ -7,9 +7,13 @@ from docx.shared import Pt, Inches
 import io
 import os
 import json
+import re as _re
+import copy
 import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
+from pptx import Presentation as PPTXPresentation
+from pptx.util import Inches as PptxInches
 
 BASE_DIR_EARLY = os.path.dirname(os.path.abspath(__file__))
 
@@ -547,6 +551,209 @@ def atualizar_projeto(doc_id):
 def deletar_projeto(doc_id):
     db.collection('projetos').document(doc_id).delete()
     return jsonify({'ok': True})
+
+
+# ── GERADOR DE SLIDES ──────────────────────────────────────────────────
+
+_PPTX_DML = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+
+
+def _pptx_clone_shapes(target_slide, source_slide):
+    tgt = target_slide.shapes._spTree
+    src = source_slide.shapes._spTree
+    for c in list(tgt)[2:]:
+        tgt.remove(c)
+    for c in list(src)[2:]:
+        tgt.append(copy.deepcopy(c))
+
+
+def _pptx_replace_text(shape, subs):
+    if not shape.has_text_frame:
+        return
+    for para in shape.text_frame.paragraphs:
+        full = ''.join(r.text for r in para.runs)
+        novo = full
+        for old, new in subs.items():
+            novo = _re.sub(_re.escape(old), new, novo, flags=_re.IGNORECASE)
+        if novo != full and para.runs:
+            para.runs[0].text = novo
+            for r in para.runs[1:]:
+                r.text = ''
+
+
+def _pptx_fill_list(shape, fragment, lines):
+    if not shape.has_text_frame or not lines:
+        return False
+    tf = shape.text_frame
+    NS = _PPTX_DML
+    for para in tf.paragraphs:
+        if fragment.upper() in para.text.upper():
+            p_elem = para._p
+            parent = p_elem.getparent()
+            idx = list(parent).index(p_elem)
+            new_elems = []
+            for line in lines:
+                np = copy.deepcopy(p_elem)
+                for r in np.findall(f'{{{NS}}}r'):
+                    np.remove(r)
+                orig_runs = p_elem.findall(f'{{{NS}}}r')
+                if orig_runs:
+                    new_r = copy.deepcopy(orig_runs[0])
+                    t = new_r.find(f'{{{NS}}}t')
+                    if t is not None:
+                        t.text = line
+                    np.append(new_r)
+                new_elems.append(np)
+            parent.remove(p_elem)
+            for j, ne in enumerate(new_elems):
+                parent.insert(idx + j, ne)
+            return True
+    return False
+
+
+def _pptx_process_slide(slide, campos, imagens, modulo, modulo_descricao,
+                         unidade, atividade, all_objs, all_enfases, all_etapas):
+    sel = {}
+    for campo in campos:
+        tc = campo.get('tipo_campo', '')
+        vals = campo.get('valores', [])
+        if vals:
+            sel[tc] = vals
+
+    objs = sel.get('objetivos', all_objs)
+    enfases = sel.get('enfases', all_enfases)
+    etapas = sel.get('etapas', all_etapas)
+
+    # Padrão genérico que captura (PUXAR...) com ou sem parêntese final
+    _PAT = r'\(PUXAR[^)]*\)?'
+
+    header_subs = {
+        '(PUXAR MODULO)': modulo,
+        '(PUXAR DESCRIÇÃO DA AULA)': atividade,
+        '(PUXAR DESCRIÇÃO)': atividade,
+    }
+
+    for shape in slide.shapes:
+        if not shape.has_text_frame:
+            continue
+        txt = '\n'.join(p.text for p in shape.text_frame.paragraphs).upper()
+
+        if 'PUXAR MODULO' in txt or 'PUXAR DESCRIÇÃO' in txt:
+            # Slides 3-6: cabeçalho "MÓDULO (PUXAR MODULO) – UNIDADE (PUXAR) – (PUXAR DESCRIÇÃO DA AULA)"
+            _pptx_replace_text(shape, header_subs)
+            for para in shape.text_frame.paragraphs:
+                full = ''.join(r.text for r in para.runs)
+                novo = _re.sub(_PAT, unidade, full)
+                if novo != full and para.runs:
+                    para.runs[0].text = novo
+                    for r in para.runs[1:]:
+                        r.text = ''
+        elif 'PUXAR OS OBJETIVOS' in txt:
+            _pptx_fill_list(shape, 'PUXAR OS OBJETIVOS', objs)
+        elif 'PUXAR ETAPAS' in txt:
+            _pptx_fill_list(shape, 'PUXAR ETAPAS', etapas)
+        elif 'PUXAR A ENFASE' in txt:
+            _pptx_fill_list(shape, 'PUXAR A ENFASE', enfases)
+        elif 'PUXAR' in txt:
+            # Slide 2 (VALORES): "Módulo (PUXAR): (PUXAR" e "Unidade (PUXAR) – (PUXAR)"
+            for para in shape.text_frame.paragraphs:
+                full = ''.join(r.text for r in para.runs)
+                if 'PUXAR' not in full.upper():
+                    continue
+                novo = full
+                tl = novo.lower()
+                if 'módulo' in tl or 'modulo' in tl:
+                    # 1º (PUXAR) → número do módulo, 2º → descrição do módulo
+                    novo = _re.sub(_PAT, modulo, novo, count=1)
+                    novo = _re.sub(_PAT, modulo_descricao, novo, count=1)
+                elif 'unidade' in tl:
+                    # 1º (PUXAR) → número da unidade, 2º → descrição da aula
+                    novo = _re.sub(_PAT, unidade, novo, count=1)
+                    novo = _re.sub(_PAT, atividade, novo, count=1)
+                else:
+                    novo = _re.sub(_PAT, unidade, novo)
+                if novo != full and para.runs:
+                    para.runs[0].text = novo
+                    for r in para.runs[1:]:
+                        r.text = ''
+
+    for img_name in imagens:
+        img_path = os.path.join(BASE_DIR, 'IMAGENS', img_name)
+        if os.path.exists(img_path):
+            try:
+                slide.shapes.add_picture(img_path, PptxInches(1), PptxInches(3.5),
+                                         width=PptxInches(9))
+            except Exception:
+                pass
+
+
+@app.route('/gerar_slides', methods=['POST'])
+def gerar_slides():
+    form = request.form
+    slide_config = json.loads(form.get('slide_config', '[]'))
+
+    modulo = form.get('modulo', 'X')
+    modulo_descricao = form.get('modulo_descricao', '')
+    unidade = form.get('unidade', 'X')
+    atividade = (form.get('atividade_descricao', '') or
+                 form.get('descricao_aula', '') or
+                 form.get('atividade_hidden', ''))
+
+    all_objs = [v for v in form.getlist('obj_verbo') if v.strip()]
+    all_enfases = [e for e in form.getlist('enfase_noun') if e.strip()]
+    etapa_nomes = form.getlist('etapa_nome')
+    etapa_outros = form.getlist('etapa_nome_outro')
+    all_etapas = []
+    for i, nome in enumerate(etapa_nomes):
+        n = nome.strip()
+        if n == 'outro' and i < len(etapa_outros):
+            n = etapa_outros[i].strip()
+        if n and n != 'outro':
+            all_etapas.append(n)
+
+    template_path = os.path.join(BASE_DIR, 'MODELO SLIDE.pptx')
+    prs_ref = PPTXPresentation(template_path)
+    prs = PPTXPresentation(template_path)
+
+    TIPO_REF = {
+        'MISSÃO':     [prs_ref.slides[0], prs_ref.slides[6]],
+        'VALORES':    [prs_ref.slides[1]],
+        'OBJETIVOS':  [prs_ref.slides[2]],
+        'FASES':      [prs_ref.slides[3]],
+        'DEBRIEFING': [prs_ref.slides[4]],
+        'ÊNFASE':     [prs_ref.slides[5]],
+    }
+    tipo_counts = {t: 0 for t in TIPO_REF}
+    blank_layout = next(
+        (l for l in prs.slide_layouts if l.name.lower() == 'blank'),
+        prs.slide_layouts[-1]
+    )
+
+    for i, cfg in enumerate(slide_config):
+        tipo = cfg.get('tipo', 'MISSÃO')
+        campos = cfg.get('campos', [])
+        imagens = cfg.get('imagens', [])
+
+        ref_list = TIPO_REF.get(tipo, TIPO_REF['MISSÃO'])
+        cnt = tipo_counts.get(tipo, 0)
+        ref_slide = ref_list[cnt % len(ref_list)]
+        tipo_counts[tipo] = cnt + 1
+
+        if i < 7:
+            target = prs.slides[i]
+        else:
+            target = prs.slides.add_slide(blank_layout)
+
+        _pptx_clone_shapes(target, ref_slide)
+        _pptx_process_slide(target, campos, imagens, modulo, modulo_descricao,
+                            unidade, atividade, all_objs, all_enfases, all_etapas)
+
+    buf = io.BytesIO()
+    prs.save(buf)
+    buf.seek(0)
+    fname = f"Slides_M{modulo}_U{unidade}.pptx"
+    return send_file(buf, as_attachment=True, download_name=fname,
+                     mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation')
 
 
 if __name__ == '__main__':

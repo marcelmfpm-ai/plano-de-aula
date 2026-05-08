@@ -316,6 +316,28 @@
       transform: scale(1.05);
       box-shadow: 0 6px 20px rgba(0,0,0,0.3);
     }
+    /* ── SLIDE BUILDER ── */
+    .slide-card { background:#f8fafc; border:1px solid #d0d5dd; border-radius:10px; margin-bottom:14px; overflow:hidden; }
+    .slide-card-header { background:#1a3a5c; color:white; padding:10px 16px; display:flex; align-items:center; gap:10px; }
+    .slide-num { background:rgba(255,255,255,0.2); padding:2px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; }
+    .slide-tipo { font-weight:700; font-size:0.95rem; flex:1; }
+    .btn-remover-slide { background:none; border:none; color:rgba(255,255,255,0.6); font-size:1.2rem; cursor:pointer; padding:0 4px; }
+    .btn-remover-slide:hover { color:white; }
+    .slide-content-area { padding:12px 16px; }
+    .slide-tags-area { display:flex; flex-wrap:wrap; gap:6px; min-height:28px; margin-bottom:10px; }
+    .campo-tag { display:inline-flex; align-items:center; gap:6px; background:#e8f0fe; border:1px solid #b3c9f0; border-radius:20px; padding:4px 12px; font-size:0.82rem; color:#1a3a5c; }
+    .imagem-tag { display:inline-flex; align-items:center; gap:6px; background:#e8f5e9; border:1px solid #a5d6a7; border-radius:20px; padding:4px 12px; font-size:0.82rem; color:#1b5e20; }
+    .campo-tag button, .imagem-tag button { background:none; border:none; color:#888; cursor:pointer; padding:0; font-size:0.9rem; line-height:1; }
+    .slide-card-actions { display:flex; gap:8px; padding:0 0 4px; flex-wrap:wrap; }
+    .btn-slide-action { background:#2d6a9f; color:white; border:none; border-radius:6px; padding:6px 14px; font-size:0.85rem; font-weight:600; cursor:pointer; }
+    .btn-slide-action:hover { background:#1a3a5c; }
+    .btn-slide-add { background:white; color:#2d6a9f; border:2px dashed #2d6a9f; border-radius:6px; padding:6px 14px; font-size:0.85rem; font-weight:600; cursor:pointer; margin-left:auto; }
+    .btn-slide-add:hover { background:#e8f0fe; }
+    .campo-opcao-grupo { margin-bottom:14px; }
+    .campo-opcao-titulo { font-weight:700; color:#1a3a5c; font-size:0.88rem; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid #eee; }
+    .campo-item-check { display:flex; align-items:flex-start; gap:8px; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:0.85rem; line-height:1.4; }
+    .campo-item-check:hover { background:#f0f4f8; }
+    .campo-item-check input { margin-top:3px; flex-shrink:0; }
   </style>
 </head>
 <body>
@@ -806,9 +828,12 @@
     </div>
 
     <!-- ── BOTÕES GERAR / SALVAR ─────────────────────────────────── -->
-    <div class="d-flex gap-2 mt-4">
+    <div class="d-flex gap-2 mt-4 flex-wrap">
       <button type="submit" class="btn-gerar flex-grow-1">
         ⬇ Gerar Plano de Aula (.docx)
+      </button>
+      <button type="button" class="btn-gerar" style="background:#2d6a9f;white-space:nowrap;" onclick="abrirCriarSlides()">
+        📊 Criar Slides
       </button>
       <button type="button" class="btn btn-success px-4" style="font-size:1rem;font-weight:600;border-radius:8px;" onclick="salvarProjeto()">
         💾 Salvar
@@ -819,6 +844,66 @@
     </div>
 
   </form>
+
+  <!-- ── SEÇÃO CRIAR SLIDES ──────────────────────────────────────────── -->
+  <div id="secao-slides" style="display:none;" class="mt-4">
+    <div class="secao-header" style="cursor:default;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="background:#2d6a9f;color:white;font-weight:700;padding:6px 18px;border-radius:20px;font-size:0.8rem;letter-spacing:1px;">SLIDES</span>
+        <span style="font-size:1.05rem;color:#1a3a5c;font-weight:700;">Configuração dos Slides</span>
+      </div>
+    </div>
+    <div class="secao-body">
+      <div id="slides-container"></div>
+      <div class="mt-4 d-flex justify-content-end">
+        <button type="button" onclick="gerarSlides()" class="btn-gerar" style="min-width:260px;">
+          ⬇ Gerar Slides (.pptx)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL CAMPO SLIDE ─────────────────────────────────────── -->
+  <div class="modal fade" id="modalCampoSlide" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#1a3a5c;">
+          <h5 class="modal-title" style="color:#D4AF37;font-weight:700;">Adicionar Campo ao Slide</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="max-height:60vh;overflow-y:auto;">
+          <div id="campo-slide-opcoes"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="confirmarCampoSlide()" style="background:#1a3a5c;border-color:#1a3a5c;font-weight:600;">
+            Adicionar Selecionados
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL IMAGEM SLIDE ─────────────────────────────────────── -->
+  <div class="modal fade" id="modalImagemSlide" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#1a3a5c;">
+          <h5 class="modal-title" style="color:#D4AF37;font-weight:700;">Selecionar Imagem para o Slide</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="img-slide-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-height:55vh;overflow-y:auto;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="confirmarImagemSlide()" style="background:#1a3a5c;border-color:#1a3a5c;font-weight:600;">
+            Adicionar Imagem(ns)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ── MODAL NOME DO PROJETO ──────────────────────────────────── -->
   <!-- Modal Cadastro de Frases -->
@@ -2985,6 +3070,198 @@
     if (!confirm('Excluir este projeto?')) return;
     await fetch(`/projeto/${id}`, { method: 'DELETE' });
     btn.closest('.proj-card').remove();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // SLIDES BUILDER
+  // ═══════════════════════════════════════════════════════════════════
+
+  let _slidesConfig = [];
+  let _slidesCampos = {};
+  let _slidesModalIdx = -1;
+  let _slidesImgSel = [];
+
+  const _SLIDE_TIPOS_DEFAULT = [
+    'MISSÃO','VALORES','OBJETIVOS','FASES','DEBRIEFING','ÊNFASE','MISSÃO'
+  ];
+
+  function abrirCriarSlides() {
+    _initSlideCampos();
+    if (_slidesConfig.length === 0) {
+      _slidesConfig = _SLIDE_TIPOS_DEFAULT.map(tipo => ({ tipo, campos: [], imagens: [] }));
+    }
+    _renderSlides();
+    const sec = document.getElementById('secao-slides');
+    sec.style.display = 'block';
+    setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }
+
+  function _initSlideCampos() {
+    const objetivos = Array.from(document.querySelectorAll('input[name="obj_verbo"]'))
+      .map(el => el.value.trim()).filter(Boolean);
+    const enfases = Array.from(document.querySelectorAll('input[name="enfase_noun"]'))
+      .map(el => el.value.trim()).filter(Boolean);
+    const etapas = Array.from(document.querySelectorAll('select[name="etapa_nome"]'))
+      .map(el => {
+        if (!el.value || el.value === '') return '';
+        if (el.value === 'outro') {
+          const row = el.closest('tr') || el.closest('.etapa-row');
+          return row?.querySelector('input[name="etapa_nome_outro"]')?.value?.trim() || '';
+        }
+        return el.value.trim();
+      }).filter(Boolean);
+
+    _slidesCampos = {};
+    if (objetivos.length) _slidesCampos.objetivos = { label: 'Objetivos de Aprendizagem', tipo_campo: 'objetivos', itens: objetivos };
+    if (enfases.length)   _slidesCampos.enfases   = { label: 'Ênfases',                   tipo_campo: 'enfases',   itens: enfases   };
+    if (etapas.length)    _slidesCampos.etapas    = { label: 'Etapas da Aula',            tipo_campo: 'etapas',    itens: etapas    };
+  }
+
+  function _renderSlides() {
+    const container = document.getElementById('slides-container');
+    container.innerHTML = '';
+    _slidesConfig.forEach((slide, idx) => {
+      const card = document.createElement('div');
+      card.className = 'slide-card';
+      const camposTags = slide.campos.map((c, ci) => {
+        const prev = c.valores.slice(0,2).join(', ') + (c.valores.length > 2 ? '…' : '');
+        return `<div class="campo-tag"><span><strong>${_esc(c.label)}:</strong> ${_esc(prev)}</span><button type="button" onclick="_remCampoSlide(${idx},${ci})">×</button></div>`;
+      }).join('');
+      const imgTags = slide.imagens.map((img, ii) =>
+        `<div class="imagem-tag"><span>${_esc(img)}</span><button type="button" onclick="_remImgSlide(${idx},${ii})">×</button></div>`
+      ).join('');
+      const remBtn = _slidesConfig.length > 7
+        ? `<button type="button" class="btn-remover-slide" onclick="_remSlide(${idx})">×</button>` : '';
+      card.innerHTML = `
+        <div class="slide-card-header">
+          <span class="slide-num">Slide ${idx + 1}</span>
+          <span class="slide-tipo">${slide.tipo}</span>${remBtn}
+        </div>
+        <div class="slide-content-area">
+          <div class="slide-tags-area">${camposTags}${imgTags}</div>
+          <div class="slide-card-actions">
+            <button type="button" class="btn-slide-action" onclick="_abrirCampoSlide(${idx})">＋ Campo</button>
+            <button type="button" class="btn-slide-action" onclick="_abrirImgSlide(${idx})">＋ Imagem</button>
+            <button type="button" class="btn-slide-add" onclick="_addSlide(${idx})">＋ Slide</button>
+          </div>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  function _addSlide(afterIdx) {
+    _slidesConfig.splice(afterIdx + 1, 0, { tipo: _slidesConfig[afterIdx].tipo, campos: [], imagens: [] });
+    _renderSlides();
+  }
+
+  function _remSlide(idx) {
+    if (_slidesConfig.length <= 7) return;
+    _slidesConfig.splice(idx, 1);
+    _renderSlides();
+  }
+
+  function _remCampoSlide(si, ci) { _slidesConfig[si].campos.splice(ci, 1); _renderSlides(); }
+  function _remImgSlide(si, ii)   { _slidesConfig[si].imagens.splice(ii, 1); _renderSlides(); }
+
+  function _abrirCampoSlide(slideIdx) {
+    _slidesModalIdx = slideIdx;
+    const container = document.getElementById('campo-slide-opcoes');
+    container.innerHTML = '';
+    if (!Object.keys(_slidesCampos).length) {
+      container.innerHTML = '<p class="text-muted text-center py-3">Nenhum dado encontrado. Preencha o formulário primeiro.</p>';
+    } else {
+      Object.entries(_slidesCampos).forEach(([, info]) => {
+        const div = document.createElement('div');
+        div.className = 'campo-opcao-grupo';
+        div.innerHTML = `<div class="campo-opcao-titulo">${info.label}</div>` +
+          info.itens.map((item, i) =>
+            `<label class="campo-item-check"><input type="checkbox" data-tipo="${info.tipo_campo}" data-idx="${i}" data-val="${_esc(item).replace(/"/g,'&quot;')}"> ${_esc(item)}</label>`
+          ).join('');
+        container.appendChild(div);
+      });
+    }
+    new bootstrap.Modal(document.getElementById('modalCampoSlide')).show();
+  }
+
+  function confirmarCampoSlide() {
+    const checked = document.querySelectorAll('#campo-slide-opcoes input[type=checkbox]:checked');
+    const grouped = {};
+    checked.forEach(chk => {
+      const tipo = chk.dataset.tipo;
+      if (!grouped[tipo]) {
+        const info = Object.values(_slidesCampos).find(i => i.tipo_campo === tipo);
+        grouped[tipo] = { tipo_campo: tipo, label: info?.label || tipo, valores: [] };
+      }
+      grouped[tipo].valores.push(chk.dataset.val);
+    });
+    Object.values(grouped).forEach(g => _slidesConfig[_slidesModalIdx].campos.push(g));
+    _renderSlides();
+    bootstrap.Modal.getInstance(document.getElementById('modalCampoSlide')).hide();
+  }
+
+  function _abrirImgSlide(slideIdx) {
+    _slidesModalIdx = slideIdx;
+    _slidesImgSel = [];
+    const grid = document.getElementById('img-slide-grid');
+    grid.innerHTML = '<div class="text-center py-3 w-100">Carregando imagens…</div>';
+    new bootstrap.Modal(document.getElementById('modalImagemSlide')).show();
+    fetch('/imagens').then(r => r.json()).then(imgs => {
+      grid.innerHTML = '';
+      imgs.forEach(img => {
+        const div = document.createElement('div');
+        div.style.cssText = 'cursor:pointer;border:2px solid #e0e0e0;border-radius:8px;overflow:hidden;text-align:center;padding:6px;transition:all .15s;';
+        div.innerHTML = `<img src="/imagens/${encodeURIComponent(img)}" style="width:100%;height:90px;object-fit:cover;border-radius:4px;" loading="lazy">
+          <div style="font-size:0.7rem;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(img)}</div>`;
+        div.addEventListener('click', () => {
+          if (_slidesImgSel.includes(img)) {
+            _slidesImgSel = _slidesImgSel.filter(i => i !== img);
+            div.style.borderColor = '#e0e0e0'; div.style.background = '';
+          } else {
+            _slidesImgSel.push(img);
+            div.style.borderColor = '#2d6a9f'; div.style.background = '#e8f0fe';
+          }
+        });
+        grid.appendChild(div);
+      });
+    }).catch(() => { grid.innerHTML = '<p class="text-danger text-center">Erro ao carregar imagens.</p>'; });
+  }
+
+  function confirmarImagemSlide() {
+    _slidesImgSel.forEach(img => {
+      if (!_slidesConfig[_slidesModalIdx].imagens.includes(img))
+        _slidesConfig[_slidesModalIdx].imagens.push(img);
+    });
+    _renderSlides();
+    bootstrap.Modal.getInstance(document.getElementById('modalImagemSlide')).hide();
+  }
+
+  async function gerarSlides() {
+    if (!_slidesConfig.length) { alert('Configure os slides primeiro.'); return; }
+    const form = document.querySelector('form');
+    if (!form) { alert('Formulário não encontrado.'); return; }
+    const fd = new FormData(form);
+    fd.set('slide_config', JSON.stringify(_slidesConfig));
+    const btn = document.querySelector('[onclick="gerarSlides()"]');
+    const orig = btn?.innerHTML;
+    if (btn) { btn.innerHTML = '⏳ Gerando…'; btn.disabled = true; }
+    try {
+      const resp = await fetch('/gerar_slides', { method: 'POST', body: fd });
+      if (!resp.ok) { const t = await resp.text(); throw new Error(t); }
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Slides_M${form.querySelector('[name="modulo"]')?.value||'X'}_U${form.querySelector('[name="unidade"]')?.value||'X'}.pptx`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch(e) {
+      alert('Erro ao gerar slides:\n' + e.message);
+    } finally {
+      if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+    }
+  }
+
+  function _esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 </script>
 </body>
