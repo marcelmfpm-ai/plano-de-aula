@@ -548,7 +548,7 @@
             <span class="badge-em-breve" style="font-size:.72rem;">gerado pela Identificação — editável</span>
           </div>
           <textarea class="form-control" name="estrategia_intro" id="estrategia_intro" rows="6"
-                    style="font-size:.88rem;"></textarea>
+                    style="font-size:.88rem;" data-editado="false"></textarea>
         </div>
 
         <!-- Bullets de estratégia -->
@@ -1220,6 +1220,7 @@
   function atualizarEstrategiaIntro() {
     const el = document.getElementById('estrategia_intro');
     if (!el) return;
+    if (el.dataset.editado === 'true') return;
     const descricao = _valorDescricaoAula();
     const local     = _valorLocal();
     const divisao   = _valorDivisao();
@@ -1246,6 +1247,8 @@
   // Monitora os campos de identificação relevantes
   document.addEventListener('DOMContentLoaded', () => {
     atualizarEstrategiaIntro();
+    document.getElementById('estrategia_intro')
+      ?.addEventListener('input', function() { this.dataset.editado = 'true'; });
     ['divisao_turma','divisao_turma_outro'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('change', atualizarEstrategiaIntro);
@@ -2476,6 +2479,8 @@
         isAutoFill = true;
       } else if (textos[rowId]) {
         texto = textos[rowId];
+      } else if (hiddenInput && hiddenInput.value) {
+        texto = hiddenInput.value;
       } else {
         texto = (textoPadraoEtapa[nome] || '');
         if (isApresent) {
@@ -2984,6 +2989,29 @@
       dados.descricao_aula = selDA.value;
       dados._descricao_aula_outro = '0';
     }
+    // Salvar itens estáticos de material por label (sobrescreve o array plano do FormData)
+    const matEstaticos = {};
+    document.querySelectorAll('input[type="hidden"][name="mat_label"]').forEach(lblEl => {
+      const row = lblEl.closest('.item-mat');
+      const qtdEl = row ? row.querySelector('input[name="mat_qtd"]') : null;
+      if (qtdEl) matEstaticos[lblEl.value] = qtdEl.value;
+    });
+    dados._mat_estatico = matEstaticos;
+
+    // Salvar itens dinâmicos "Outros" de material separadamente
+    const gruposIds = ['docs', 'elet', 'veic', 'oper', 'peric', 'infra', 'apoio', 'ceno'];
+    const outrosMat = [];
+    gruposIds.forEach(grupoId => {
+      const container = document.getElementById(`outros-${grupoId}`);
+      if (!container) return;
+      container.querySelectorAll('.item-mat').forEach(div => {
+        const qtdEl = div.querySelector('input[name="mat_qtd"]');
+        const lblEl = div.querySelector('input[type="text"][name="mat_label"]');
+        if (qtdEl && lblEl) outrosMat.push({ grupoId, qtd: qtdEl.value, label: lblEl.value });
+      });
+    });
+    dados._outros_mat = outrosMat;
+
     // Salvar estado dos cliques verdes por índice de seção
     dados._secoes_done = Array.from(document.querySelectorAll('.secao')).map(
       s => (s.querySelector('.secao-check') && s.querySelector('.secao-check').classList.contains('done')) ? '1' : '0'
@@ -3050,7 +3078,6 @@
         </div>
         <div class="d-flex gap-2 mt-2">
           <button class="btn btn-sm btn-primary flex-grow-1" onclick="abrirProjeto('${p.id}')">📂 Abrir</button>
-          <button class="btn btn-sm btn-outline-danger" onclick="deletarProjeto('${p.id}', this)" title="Excluir">✕</button>
         </div>
       </div>`).join('');
   }
@@ -3108,7 +3135,8 @@
     for (const [k, v] of Object.entries(dados)) {
       if (k === 'obj_verbo' || k === 'obj_verbo_outro' || k === 'obj_complemento' ||
           k === 'enfase_noun' || k === 'enfase_comp' || k === 'descricao_aula' ||
-          k === '_descricao_aula_outro' || k === '_secoes_done') continue;
+          k === '_descricao_aula_outro' || k === '_secoes_done' ||
+          k === 'mat_qtd' || k === 'mat_label' || k === '_mat_estatico' || k === '_outros_mat') continue;
       const els = form.querySelectorAll(`[name="${k}"]`);
       if (!els.length) continue;
       const vals = Array.isArray(v) ? v : [v];
@@ -3152,6 +3180,62 @@
         } else {
           btn.classList.remove('done');
         }
+      });
+    }
+
+    // Restaurar quantidades de material estático por correspondência de label
+    const matEstatico = dados._mat_estatico || {};
+    // Fallback para projetos antigos: reconstrói pelo array plano (apenas itens estáticos, em ordem)
+    if (!Object.keys(matEstatico).length && Array.isArray(dados.mat_label) && Array.isArray(dados.mat_qtd)) {
+      const hiddenLabels = Array.from(form.querySelectorAll('input[type="hidden"][name="mat_label"]'));
+      hiddenLabels.forEach((lblEl, i) => {
+        if (dados.mat_qtd[i] !== undefined) {
+          const row = lblEl.closest('.item-mat');
+          const qtdEl = row ? row.querySelector('input[name="mat_qtd"]') : null;
+          if (qtdEl) qtdEl.value = dados.mat_qtd[i];
+        }
+      });
+    } else {
+      form.querySelectorAll('input[type="hidden"][name="mat_label"]').forEach(lblEl => {
+        if (matEstatico[lblEl.value] !== undefined) {
+          const row = lblEl.closest('.item-mat');
+          const qtdEl = row ? row.querySelector('input[name="mat_qtd"]') : null;
+          if (qtdEl) qtdEl.value = matEstatico[lblEl.value];
+        }
+      });
+    }
+
+    // Restaurar itens dinâmicos "Outros" de material
+    const gruposIds = ['docs', 'elet', 'veic', 'oper', 'peric', 'infra', 'apoio', 'ceno'];
+    gruposIds.forEach(grupoId => {
+      const container = document.getElementById(`outros-${grupoId}`);
+      if (container) container.innerHTML = '';
+    });
+    if (Array.isArray(dados._outros_mat)) {
+      dados._outros_mat.forEach(item => {
+        const outrosId = `outros-${item.grupoId}`;
+        const painelId = `mat-${item.grupoId}`;
+        adicionarOutroMat(outrosId, painelId);
+        const container = document.getElementById(outrosId);
+        const lastDiv = container ? container.lastElementChild : null;
+        if (lastDiv) {
+          const qtdEl = lastDiv.querySelector('input[name="mat_qtd"]');
+          const lblEl = lastDiv.querySelector('input[type="text"][name="mat_label"]');
+          if (qtdEl) { qtdEl.value = item.qtd; atualizarGrupoMat(qtdEl); }
+          if (lblEl) lblEl.value = item.label;
+        }
+      });
+    }
+
+    // Restaurar professores APC: criar os selects e setar os tipos salvos
+    const profApcQtd = parseInt(dados.prof_apc_qtd) || 0;
+    if (profApcQtd > 0) {
+      expandirSubtipos(profApcQtd);
+      const tiposSalvos = Array.isArray(dados.prof_apc_tipo)
+        ? dados.prof_apc_tipo
+        : (dados.prof_apc_tipo ? [dados.prof_apc_tipo] : []);
+      document.querySelectorAll('#profs-apc-lista select[name="prof_apc_tipo"]').forEach((sel, i) => {
+        if (tiposSalvos[i] !== undefined) sel.value = tiposSalvos[i];
       });
     }
 

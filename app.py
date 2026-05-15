@@ -55,6 +55,15 @@ def _set_spacing_15(para):
     jc.set(qn('w:val'), 'both')
 
 
+def _limpar_formatacao_lista(para):
+    """Remove numPr e indentação herdados de estilos de lista."""
+    pPr = para._p.get_or_add_pPr()
+    for tag in (qn('w:numPr'), qn('w:ind')):
+        el = pPr.find(tag)
+        if el is not None:
+            pPr.remove(el)
+
+
 def _centrar_paragrafo(para):
     pPr = para._p.get_or_add_pPr()
     for jc_el in pPr.findall(qn('w:jc')):
@@ -400,23 +409,49 @@ def gerar():
                 tbl = inserir_tabela_apos(doc, para, estrutura_rows)
                 ultimo = tbl._tbl
                 for idx, (nome_etapa, detalhe, img_filename) in enumerate(estrutura_detalhes):
+                    # Linha em branco antes do título
                     p_blank = OxmlElement('w:p')
                     ultimo.addnext(p_blank)
+                    p_blank_para = DocxParagraph(p_blank, para._parent)
+                    try:
+                        p_blank_para.style = 'Normal'
+                    except Exception:
+                        pass
+                    _set_spacing_15(p_blank_para)
+                    _limpar_formatacao_lista(p_blank_para)
+
+                    # Título 4.x — negrito, Normal, justificado
                     p_tit_xml = OxmlElement('w:p')
                     p_blank.addnext(p_tit_xml)
                     p_tit = DocxParagraph(p_tit_xml, para._parent)
+                    try:
+                        p_tit.style = 'Normal'
+                    except Exception:
+                        pass
+                    _set_spacing_15(p_tit)
+                    _limpar_formatacao_lista(p_tit)
                     _fmt(p_tit.add_run(f'4.{idx + 1} {nome_etapa}'), bold=True)
-                    p_blank_tit = OxmlElement('w:p')
-                    p_tit_xml.addnext(p_blank_tit)
-                    p_det_xml = OxmlElement('w:p')
-                    p_blank_tit.addnext(p_det_xml)
-                    p_det = DocxParagraph(p_det_xml, para._parent)
+
+                    # Detalhe: uma linha → um parágrafo (igual item 5)
+                    ultimo = p_tit_xml
                     if detalhe:
-                        _fmt(p_det.add_run(detalhe))
-                    ultimo = p_det_xml
+                        for linha in detalhe.split('\n'):
+                            p_lin_xml = OxmlElement('w:p')
+                            ultimo.addnext(p_lin_xml)
+                            p_lin = DocxParagraph(p_lin_xml, para._parent)
+                            try:
+                                p_lin.style = 'Normal'
+                            except Exception:
+                                pass
+                            _set_spacing_15(p_lin)
+                            _limpar_formatacao_lista(p_lin)
+                            if linha.strip():
+                                _fmt(p_lin.add_run(linha.replace('\t', ' ')))
+                            ultimo = p_lin_xml
+
                     if img_filename:
                         img_fns = [f.strip() for f in img_filename.split('|') if f.strip()]
-                        ref_xml = p_det_xml
+                        ref_xml = ultimo
                         for img_fn in img_fns:
                             img_path = os.path.join(IMAGENS_DIR, img_fn)
                             if os.path.isfile(img_path):
